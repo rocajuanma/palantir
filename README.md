@@ -16,4 +16,10 @@ go get github.com/rocajuanma/palantir
 - Progress indicators
 - Interactive confirmations
 
-See the [terminal output demo](cmd/terminal/README.md)
+
+<p align="center">
+  <img src="./cmd/terminal/terminal.png" alt="Palantir Demo">
+</p>
+
+
+See the [Palantir terminal demo](cmd/terminal/README.md) for usage examples.
