@@ -6,7 +6,7 @@ import (
 
 func main() {
 	// Initialize the default output handler(all features enabled)
-	handler := terminal.NewOutputHandler()
+	handler := terminal.NewDefaultOutputHandler()
 
 	// Showcases the different output levels when default configurations are used.
 	handler.PrintHeader("Palantir Demo(Default)")
@@ -33,7 +33,7 @@ func main() {
 		DisableOutput: false,
 	}
 
-	onlyColours := terminal.NewOutputHandlerWithConfig(coloursOnlyConfig)
+	onlyColours := terminal.NewOutputHandler(coloursOnlyConfig)
 	onlyColours.PrintHeader("Palantir Demo(Colours Only)")
 	onlyColours.PrintInfo("This is an info message")
 	onlyColours.PrintSuccess("Operation completed successfully!")
@@ -55,7 +55,7 @@ func main() {
 		UseFormatting: false,
 		DisableOutput: false,
 	}
-	noColours := terminal.NewOutputHandlerWithConfig(noColoursConfig)
+	noColours := terminal.NewOutputHandler(noColoursConfig)
 	noColours.PrintHeader("Palantir Demo(Without Colours)")
 	noColours.PrintInfo("This is an info message")
 	noColours.PrintSuccess("Operation completed successfully!")

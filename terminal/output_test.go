@@ -87,7 +87,7 @@ func TestFormatMessage_AllConfigurations(t *testing.T) {
 
 	for _, config := range configs {
 		t.Run(config.name, func(t *testing.T) {
-			handler := &DefaultOutputHandler{config: config.config}
+			handler := NewOutputHandler(config.config)
 
 			for level := range config.expected {
 				t.Run(fmt.Sprintf("Level_%d", level), func(t *testing.T) {
@@ -155,7 +155,7 @@ func generateExpectedOutput(level OutputLevel, message string, config *OutputCon
 
 func TestFormatMessage_EdgeCases(t *testing.T) {
 	// Test disabled output
-	handler := &DefaultOutputHandler{
+	handler := &outputHandler{
 		config: &OutputConfig{DisableOutput: true},
 	}
 	result := handler.FormatMessage(LevelInfo, "Test Message")
@@ -165,7 +165,7 @@ func TestFormatMessage_EdgeCases(t *testing.T) {
 
 	// Test unsupported terminal
 	setupUnsupportedTerminal(t)
-	handler = &DefaultOutputHandler{
+	handler = &outputHandler{
 		config: &OutputConfig{
 			UseColors:     true,
 			UseEmojis:     true,
@@ -184,7 +184,7 @@ func TestPrintMethods_AllVariations(t *testing.T) {
 	setupSupportedTerminal(t)
 
 	// Test basic print methods
-	handler := &DefaultOutputHandler{
+	handler := &outputHandler{
 		config: &OutputConfig{
 			UseColors:     true,
 			UseEmojis:     true,
@@ -304,7 +304,7 @@ func TestPrintAlreadyAvailable_AllConfigurations(t *testing.T) {
 
 	for _, config := range configs {
 		t.Run(config.name, func(t *testing.T) {
-			handler := &DefaultOutputHandler{config: config.config}
+			handler := NewOutputHandler(config.config)
 
 			output := captureOutput(func() {
 				handler.PrintAlreadyAvailable("Feature is available")
@@ -320,14 +320,12 @@ func TestPrintProgress_AllScenarios(t *testing.T) {
 	setupSupportedTerminal(t)
 
 	t.Run("WithColors", func(t *testing.T) {
-		handler := &DefaultOutputHandler{
-			config: &OutputConfig{
-				UseColors:     true,
-				UseEmojis:     true,
-				UseFormatting: true,
-				DisableOutput: false,
-			},
-		}
+		handler := NewOutputHandler(&OutputConfig{
+			UseColors:     true,
+			UseEmojis:     true,
+			UseFormatting: true,
+			DisableOutput: false,
+		})
 
 		output := captureOutput(func() {
 			handler.PrintProgress(3, 10, "Processing")
@@ -339,14 +337,12 @@ func TestPrintProgress_AllScenarios(t *testing.T) {
 	})
 
 	t.Run("WithoutColors", func(t *testing.T) {
-		handler := &DefaultOutputHandler{
-			config: &OutputConfig{
-				UseColors:     false,
-				UseEmojis:     false,
-				UseFormatting: false,
-				DisableOutput: false,
-			},
-		}
+		handler := NewOutputHandler(&OutputConfig{
+			UseColors:     false,
+			UseEmojis:     false,
+			UseFormatting: false,
+			DisableOutput: false,
+		})
 
 		output := captureOutput(func() {
 			handler.PrintProgress(3, 10, "Processing")
@@ -358,14 +354,12 @@ func TestPrintProgress_AllScenarios(t *testing.T) {
 	})
 
 	t.Run("EdgeCases", func(t *testing.T) {
-		handler := &DefaultOutputHandler{
-			config: &OutputConfig{
-				UseColors:     false,
-				UseEmojis:     false,
-				UseFormatting: false,
-				DisableOutput: false,
-			},
-		}
+		handler := NewOutputHandler(&OutputConfig{
+			UseColors:     false,
+			UseEmojis:     false,
+			UseFormatting: false,
+			DisableOutput: false,
+		})
 
 		tests := []struct {
 			current  int
@@ -392,11 +386,9 @@ func TestPrintProgress_AllScenarios(t *testing.T) {
 }
 
 func TestDisabledOutput(t *testing.T) {
-	handler := &DefaultOutputHandler{
-		config: &OutputConfig{
-			DisableOutput: true,
-		},
-	}
+	handler := NewOutputHandler(&OutputConfig{
+		DisableOutput: true,
+	})
 
 	// Test that all print methods return nothing when disabled
 	methods := []func(){
@@ -418,68 +410,8 @@ func TestDisabledOutput(t *testing.T) {
 	}
 }
 
-// TestConfiguration_AllMethods tests all configuration methods comprehensively
-func TestConfiguration_AllMethods(t *testing.T) {
-	// Test default configuration first
-	handler := NewOutputHandler().(*DefaultOutputHandler)
-	if !handler.config.UseColors {
-		t.Error("Default config should have UseColors = true")
-	}
-	if !handler.config.UseEmojis {
-		t.Error("Default config should have UseEmojis = true")
-	}
-	if !handler.config.UseFormatting {
-		t.Error("Default config should have UseFormatting = true")
-	}
-	if handler.config.DisableOutput {
-		t.Error("Default config should have DisableOutput = false")
-	}
-	if handler.config.VerboseMode {
-		t.Error("Default config should have VerboseMode = false")
-	}
-
-	// Test SetColors
-	handler.SetColors(false)
-	if handler.config.UseColors {
-		t.Error("SetColors(false) should disable colors")
-	}
-
-	handler.SetColors(true)
-	if !handler.config.UseColors {
-		t.Error("SetColors(true) should enable colors")
-	}
-
-	// Test SetEmojis
-	handler.SetEmojis(false)
-	if handler.config.UseEmojis {
-		t.Error("SetEmojis(false) should disable emojis")
-	}
-
-	handler.SetEmojis(true)
-	if !handler.config.UseEmojis {
-		t.Error("SetEmojis(true) should enable emojis")
-	}
-
-	// Test SetVerbose
-	handler.SetVerbose(true)
-	if !handler.config.VerboseMode {
-		t.Error("SetVerbose(true) should enable verbose mode")
-	}
-
-	// Test Disable/Enable
-	handler.Disable()
-	if !handler.config.DisableOutput {
-		t.Error("Disable() should disable output")
-	}
-
-	handler.Enable()
-	if handler.config.DisableOutput {
-		t.Error("Enable() should enable output")
-	}
-}
-
 func TestIsSupported(t *testing.T) {
-	handler := &DefaultOutputHandler{}
+	handler := &outputHandler{}
 
 	setupSupportedTerminal(t)
 	if !handler.IsSupported() {
@@ -499,14 +431,12 @@ func TestGlobalHandler(t *testing.T) {
 		t.Error("GetGlobalOutputHandler() should not return nil")
 	}
 
-	customHandler := &DefaultOutputHandler{
-		config: &OutputConfig{
-			UseColors:     false,
-			UseEmojis:     false,
-			UseFormatting: false,
-			DisableOutput: false,
-		},
-	}
+	customHandler := NewOutputHandler(&OutputConfig{
+		UseColors:     false,
+		UseEmojis:     false,
+		UseFormatting: false,
+		DisableOutput: false,
+	})
 
 	SetGlobalOutputHandler(customHandler)
 	retrieved := GetGlobalOutputHandler()
@@ -514,20 +444,18 @@ func TestGlobalHandler(t *testing.T) {
 		t.Error("SetGlobalOutputHandler() should set the global handler")
 	}
 
-	SetGlobalOutputHandler(NewOutputHandler())
+	SetGlobalOutputHandler(NewDefaultOutputHandler())
 }
 
 func TestConfirm_AllScenarios(t *testing.T) {
 	setupSupportedTerminal(t)
 
-	handler := &DefaultOutputHandler{
-		config: &OutputConfig{
-			UseColors:     true,
-			UseEmojis:     true,
-			UseFormatting: true,
-			DisableOutput: false,
-		},
-	}
+	handler := NewOutputHandler(&OutputConfig{
+		UseColors:     true,
+		UseEmojis:     true,
+		UseFormatting: true,
+		DisableOutput: false,
+	})
 
 	tests := []struct {
 		name     string
@@ -545,6 +473,7 @@ func TestConfirm_AllScenarios(t *testing.T) {
 		{"Invalid_input", "maybe", false},
 		{"Partial_yes", "ye", false},
 		{"Partial_no", "na", false},
+		{"random_word", "random", false},
 	}
 
 	for _, tt := range tests {
@@ -583,14 +512,12 @@ func TestConfirm_AllScenarios(t *testing.T) {
 func TestPrintProgress_ExtendedEdgeCases(t *testing.T) {
 	setupSupportedTerminal(t)
 
-	handler := &DefaultOutputHandler{
-		config: &OutputConfig{
-			UseColors:     false,
-			UseEmojis:     false,
-			UseFormatting: false,
-			DisableOutput: false,
-		},
-	}
+	handler := NewOutputHandler(&OutputConfig{
+		UseColors:     false,
+		UseEmojis:     false,
+		UseFormatting: false,
+		DisableOutput: false,
+	})
 
 	tests := []struct {
 		name     string
@@ -623,14 +550,12 @@ func TestPrintProgress_ExtendedEdgeCases(t *testing.T) {
 	}
 
 	t.Run("WithColors", func(t *testing.T) {
-		coloredHandler := &DefaultOutputHandler{
-			config: &OutputConfig{
-				UseColors:     true,
-				UseEmojis:     true,
-				UseFormatting: true,
-				DisableOutput: false,
-			},
-		}
+		coloredHandler := NewOutputHandler(&OutputConfig{
+			UseColors:     true,
+			UseEmojis:     true,
+			UseFormatting: true,
+			DisableOutput: false,
+		})
 
 		output := captureOutput(func() {
 			coloredHandler.PrintProgress(3, 10, "Colored progress")
@@ -657,14 +582,12 @@ func TestPrintProgress_ExtendedEdgeCases(t *testing.T) {
 func TestOutputFormatConsistency(t *testing.T) {
 	setupSupportedTerminal(t)
 
-	handler := &DefaultOutputHandler{
-		config: &OutputConfig{
-			UseColors:     true,
-			UseEmojis:     true,
-			UseFormatting: true,
-			DisableOutput: false,
-		},
-	}
+	handler := NewOutputHandler(&OutputConfig{
+		UseColors:     true,
+		UseEmojis:     true,
+		UseFormatting: true,
+		DisableOutput: false,
+	})
 
 	message := "Test Message"
 	output1 := handler.FormatMessage(LevelSuccess, message)

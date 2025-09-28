@@ -3,6 +3,8 @@ package terminal
 import (
 	"fmt"
 	"os"
+
+	"github.com/rocajuanma/palantir/interfaces"
 )
 
 // OutputLevel represents different levels of output
@@ -26,14 +28,14 @@ type OutputConfig struct {
 	VerboseMode   bool
 }
 
-// DefaultOutputHandler implements the OutputHandler interface
-type DefaultOutputHandler struct {
+// outputHandler implements the OutputHandler interface
+type outputHandler struct {
 	config *OutputConfig
 }
 
-// NewOutputHandler creates a new OutputHandler with default configuration
-func NewOutputHandler() OutputHandler {
-	return &DefaultOutputHandler{
+// NewDefaultOutputHandler creates a new outputHandler with default configurations
+func NewDefaultOutputHandler() interfaces.OutputHandler {
+	return &outputHandler{
 		config: &OutputConfig{
 			UseColors:     true,
 			UseEmojis:     true,
@@ -44,13 +46,13 @@ func NewOutputHandler() OutputHandler {
 	}
 }
 
-// NewOutputHandlerWithConfig creates a new OutputHandler with a custom configuration
-func NewOutputHandlerWithConfig(config *OutputConfig) OutputHandler {
-	return &DefaultOutputHandler{config: config}
+// NewOutputHandler creates a new outputHandler with a custom configurations
+func NewOutputHandler(config *OutputConfig) *outputHandler {
+	return &outputHandler{config: config}
 }
 
 // FormatMessage formats a message according to the output level
-func (oh *DefaultOutputHandler) FormatMessage(level OutputLevel, message string) string {
+func (oh *outputHandler) FormatMessage(level OutputLevel, message string) string {
 	if oh.config.DisableOutput {
 		return ""
 	}
@@ -88,7 +90,7 @@ func (oh *DefaultOutputHandler) FormatMessage(level OutputLevel, message string)
 }
 
 // PrintWithLevel prints a message with the specified level
-func (oh *DefaultOutputHandler) PrintWithLevel(level OutputLevel, format string, args ...interface{}) {
+func (oh *outputHandler) PrintWithLevel(level OutputLevel, format string, args ...interface{}) {
 	if oh.config.DisableOutput {
 		return
 	}
@@ -100,31 +102,31 @@ func (oh *DefaultOutputHandler) PrintWithLevel(level OutputLevel, format string,
 
 // Implementation of OutputHandler interface methods
 
-func (oh *DefaultOutputHandler) PrintHeader(message string) {
+func (oh *outputHandler) PrintHeader(message string) {
 	oh.PrintWithLevel(LevelHeader, message)
 }
 
-func (oh *DefaultOutputHandler) PrintStage(message string) {
+func (oh *outputHandler) PrintStage(message string) {
 	oh.PrintWithLevel(LevelStage, message)
 }
 
-func (oh *DefaultOutputHandler) PrintSuccess(message string) {
+func (oh *outputHandler) PrintSuccess(message string) {
 	oh.PrintWithLevel(LevelSuccess, message)
 }
 
-func (oh *DefaultOutputHandler) PrintError(format string, args ...interface{}) {
+func (oh *outputHandler) PrintError(format string, args ...interface{}) {
 	oh.PrintWithLevel(LevelError, format, args...)
 }
 
-func (oh *DefaultOutputHandler) PrintWarning(format string, args ...interface{}) {
+func (oh *outputHandler) PrintWarning(format string, args ...interface{}) {
 	oh.PrintWithLevel(LevelWarning, format, args...)
 }
 
-func (oh *DefaultOutputHandler) PrintInfo(format string, args ...interface{}) {
+func (oh *outputHandler) PrintInfo(format string, args ...interface{}) {
 	oh.PrintWithLevel(LevelInfo, format, args...)
 }
 
-func (oh *DefaultOutputHandler) PrintAlreadyAvailable(format string, args ...interface{}) {
+func (oh *outputHandler) PrintAlreadyAvailable(format string, args ...interface{}) {
 	if oh.config.DisableOutput {
 		return
 	}
@@ -140,7 +142,7 @@ func (oh *DefaultOutputHandler) PrintAlreadyAvailable(format string, args ...int
 	}
 }
 
-func (oh *DefaultOutputHandler) PrintProgress(current, total int, message string) {
+func (oh *outputHandler) PrintProgress(current, total int, message string) {
 	if oh.config.DisableOutput {
 		return
 	}
@@ -154,7 +156,7 @@ func (oh *DefaultOutputHandler) PrintProgress(current, total int, message string
 	}
 }
 
-func (oh *DefaultOutputHandler) Confirm(message string) bool {
+func (oh *outputHandler) Confirm(message string) bool {
 	if oh.config.DisableOutput {
 		return false
 	}
@@ -168,50 +170,35 @@ func (oh *DefaultOutputHandler) Confirm(message string) bool {
 	var response string
 	fmt.Scanln(&response)
 
-	return response == "y" || response == "Y" || response == "yes" || response == "Yes"
+	switch response {
+	case "y", "Y", "yes", "Yes":
+		return true
+	default:
+		return false
+	}
 }
 
-func (oh *DefaultOutputHandler) IsSupported() bool {
+func (oh *outputHandler) IsSupported() bool {
 	return os.Getenv("TERM") != "dumb"
 }
 
-// SetVerbose enables or disables verbose mode
-func (oh *DefaultOutputHandler) SetVerbose(verbose bool) {
-	oh.config.VerboseMode = verbose
-}
-
-// SetColors enables or disables color output
-func (oh *DefaultOutputHandler) SetColors(useColors bool) {
-	oh.config.UseColors = useColors
-}
-
-// SetEmojis enables or disables emoji output
-func (oh *DefaultOutputHandler) SetEmojis(useEmojis bool) {
-	oh.config.UseEmojis = useEmojis
-}
-
 // Disable disables all output
-func (oh *DefaultOutputHandler) Disable() {
+func (oh *outputHandler) Disable() {
 	oh.config.DisableOutput = true
 }
 
-// Enable enables output
-func (oh *DefaultOutputHandler) Enable() {
-	oh.config.DisableOutput = false
-}
-
 // Global output handler instance
-var globalOutputHandler OutputHandler = NewOutputHandler()
+var globalOutputHandler interfaces.OutputHandler = NewDefaultOutputHandler()
 
 // SetGlobalOutputHandler sets the global output handler
-func SetGlobalOutputHandler(handler OutputHandler) {
+func SetGlobalOutputHandler(handler interfaces.OutputHandler) {
 	globalOutputHandler = handler
 }
 
 // GetGlobalOutputHandler returns the global output handler
-func GetGlobalOutputHandler() OutputHandler {
+func GetGlobalOutputHandler() interfaces.OutputHandler {
 	if globalOutputHandler == nil {
-		globalOutputHandler = NewOutputHandler()
+		globalOutputHandler = NewDefaultOutputHandler()
 	}
 	return globalOutputHandler
 }

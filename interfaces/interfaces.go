@@ -1,4 +1,4 @@
-package terminal
+package interfaces
 
 // OutputHandler defines the interface for terminal output operations
 type OutputHandler interface {
@@ -12,4 +12,5 @@ type OutputHandler interface {
 	PrintProgress(current, total int, message string)
 	Confirm(message string) bool
 	IsSupported() bool
+	Disable()
 }
