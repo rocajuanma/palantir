@@ -44,6 +44,11 @@ func NewOutputHandler() OutputHandler {
 	}
 }
 
+// NewOutputHandlerWithConfig creates a new OutputHandler with a custom configuration
+func NewOutputHandlerWithConfig(config *OutputConfig) OutputHandler {
+	return &DefaultOutputHandler{config: config}
+}
+
 // FormatMessage formats a message according to the output level
 func (oh *DefaultOutputHandler) FormatMessage(level OutputLevel, message string) string {
 	if oh.config.DisableOutput {
