@@ -2,15 +2,15 @@ package terminal
 
 // Color constants for terminal output
 const (
-	ColorReset  = "\033[0m"
-	ColorRed    = "\033[31m"
-	ColorGreen  = "\033[32m"
-	ColorYellow = "\033[33m"
-	ColorBlue   = "\033[34m"
-	ColorPurple = "\033[35m"
-	ColorCyan   = "\033[36m"
-	ColorWhite  = "\033[37m"
-	ColorBold   = "\033[1m"
+	ColorReset  = "\033[0m"  // Reset all attributes
+	ColorRed    = "\033[31m" // Red foreground
+	ColorGreen  = "\033[32m" // Green foreground
+	ColorYellow = "\033[33m" // Yellow foreground
+	ColorBlue   = "\033[34m" // Blue foreground
+	ColorPurple = "\033[35m" // Magenta (sometimes called purple) foreground
+	ColorCyan   = "\033[36m" // Cyan foreground
+	ColorWhite  = "\033[37m" // White foreground
+	ColorBold   = "\033[1m"  // Bold text
 )
 
 var (
