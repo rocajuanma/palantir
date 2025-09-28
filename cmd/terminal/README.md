@@ -15,10 +15,11 @@ go build -o palantir-demo ./cmd/terminal
 
 ## Output
 
+- Multiple configurations available
 - All output levels (Header, Info, Success, Warning, Error, Stage)
 - Progress indicators
 - Interactive confirmations
-- Color and emoji formatting
+- Colour and emoji formatting
 
 
 
