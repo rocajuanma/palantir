@@ -21,11 +21,12 @@ const (
 
 // OutputConfig holds configuration for output formatting
 type OutputConfig struct {
-	UseColors     bool
-	UseEmojis     bool
-	UseFormatting bool
-	DisableOutput bool
-	VerboseMode   bool
+	UseColors         bool
+	UseEmojis         bool
+	UseFormatting     bool
+	DisableOutput     bool
+	VerboseMode       bool
+	ColorizeLevelOnly bool
 }
 
 // outputHandler implements the OutputHandler interface
@@ -37,11 +38,12 @@ type outputHandler struct {
 func NewDefaultOutputHandler() interfaces.OutputHandler {
 	return &outputHandler{
 		config: &OutputConfig{
-			UseColors:     true,
-			UseEmojis:     true,
-			UseFormatting: true,
-			DisableOutput: false,
-			VerboseMode:   false,
+			UseColors:         true,
+			UseEmojis:         true,
+			UseFormatting:     true,
+			DisableOutput:     false,
+			VerboseMode:       false,
+			ColorizeLevelOnly: false,
 		},
 	}
 }
@@ -61,28 +63,33 @@ func (oh *outputHandler) FormatMessage(level OutputLevel, message string) string
 		return message
 	}
 
-	var prefix, color string
+	// Headers are treated specially because the level representation is the banner itself.
+	if level == LevelHeader {
+		if oh.config.UseColors {
+			color := outputColors[level]
+			return fmt.Sprintf(coloredHeaderFormat, ColorBold, color, message, ColorReset)
+		}
+		return fmt.Sprintf(headerFormat, message)
+	}
+
+	var prefix string
+	var color string
 
 	if oh.config.UseColors && oh.config.UseEmojis && oh.config.UseFormatting {
 		prefix = outputEmojis[level]
 		color = outputColors[level]
-		if level == LevelHeader {
-			return fmt.Sprintf(coloredHeaderFormat, ColorBold, color, message, ColorReset)
-		}
-	} else if oh.config.UseColors {
-		prefix = outputPrefixes[level]
-		color = outputColors[level]
-		if level == LevelHeader {
-			return fmt.Sprintf(coloredHeaderFormat, ColorBold, color, message, ColorReset)
-		}
 	} else {
 		prefix = outputPrefixes[level]
-		if level == LevelHeader {
-			return fmt.Sprintf(prefix, message)
+		if oh.config.UseColors {
+			color = outputColors[level]
 		}
 	}
 
 	if oh.config.UseColors && oh.config.UseFormatting {
+		if oh.config.ColorizeLevelOnly && color != "" && prefix != "" {
+			coloredPrefix := fmt.Sprintf("%s%s%s%s", ColorBold, color, prefix, ColorReset)
+			return fmt.Sprintf("%s%s\n", coloredPrefix, message)
+		}
 		return fmt.Sprintf("%s%s%s%s%s\n", ColorBold, color, prefix, message, ColorReset)
 	}
 
@@ -133,13 +140,22 @@ func (oh *outputHandler) PrintAlreadyAvailable(format string, args ...interface{
 
 	message := fmt.Sprintf(format, args...)
 
-	if oh.config.UseColors && oh.config.UseEmojis && oh.config.UseFormatting {
-		fmt.Printf("%s%s💙 %s%s\n", ColorBold, ColorBlue, message, ColorReset)
-	} else if oh.config.UseColors {
-		fmt.Printf("%s%s[AVAILABLE] %s%s\n", ColorBold, ColorBlue, message, ColorReset)
-	} else {
-		fmt.Printf("[AVAILABLE] %s\n", message)
+	if oh.config.UseColors {
+		prefix := "[AVAILABLE] "
+		if oh.config.UseEmojis && oh.config.UseFormatting {
+			prefix = "💙 "
+		}
+
+		if oh.config.ColorizeLevelOnly {
+			coloredPrefix := fmt.Sprintf("%s%s%s%s", ColorBold, ColorBlue, prefix, ColorReset)
+			fmt.Printf("%s%s\n", coloredPrefix, message)
+		} else {
+			fmt.Printf("%s%s%s%s%s\n", ColorBold, ColorBlue, prefix, message, ColorReset)
+		}
+		return
 	}
+
+	fmt.Printf("[AVAILABLE] %s\n", message)
 }
 
 func (oh *outputHandler) PrintProgress(current, total int, message string) {
@@ -150,7 +166,13 @@ func (oh *outputHandler) PrintProgress(current, total int, message string) {
 	percentage := float64(current) / float64(total) * 100
 
 	if oh.config.UseColors && oh.config.UseFormatting {
-		fmt.Printf("\r%s%s[%d/%d] %.0f%% - %s%s\n", ColorBold, ColorCyan, current, total, percentage, message, ColorReset)
+		progressPrefix := fmt.Sprintf("[%d/%d] %.0f%% - ", current, total, percentage)
+		if oh.config.ColorizeLevelOnly {
+			coloredPrefix := fmt.Sprintf("%s%s%s%s", ColorBold, ColorCyan, progressPrefix, ColorReset)
+			fmt.Printf("\r%s%s\n", coloredPrefix, message)
+		} else {
+			fmt.Printf("\r%s%s%s%s%s\n", ColorBold, ColorCyan, progressPrefix, message, ColorReset)
+		}
 	} else {
 		fmt.Printf("\r[%d/%d] %.0f%% - %s\n", current, total, percentage, message)
 	}
@@ -162,7 +184,12 @@ func (oh *outputHandler) Confirm(message string) bool {
 	}
 
 	if oh.config.UseColors && oh.config.UseFormatting {
-		fmt.Printf("%s%s? %s (y/N): %s", ColorBold, ColorYellow, message, ColorReset)
+		if oh.config.ColorizeLevelOnly {
+			coloredPrefix := fmt.Sprintf("%s%s?%s", ColorBold, ColorYellow, ColorReset)
+			fmt.Printf("%s %s (y/N): ", coloredPrefix, message)
+		} else {
+			fmt.Printf("%s%s? %s (y/N): %s", ColorBold, ColorYellow, message, ColorReset)
+		}
 	} else {
 		fmt.Printf("? %s (y/N): ", message)
 	}

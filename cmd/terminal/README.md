@@ -16,6 +16,7 @@ go build -o palantir-demo ./cmd/terminal
 ## Output
 
 - Multiple configurations available
+- Level-only colouring available for subtler emphasis
 - All output levels (Header, Info, Success, Warning, Error, Stage)
 - Progress indicators
 - Interactive confirmations
@@ -26,5 +27,4 @@ go build -o palantir-demo ./cmd/terminal
 <p align="center">
   <img src="terminal.png" alt="Palantir Demo">
 </p>
-
 

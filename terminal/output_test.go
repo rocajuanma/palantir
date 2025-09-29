@@ -60,6 +60,18 @@ func TestFormatMessage_AllConfigurations(t *testing.T) {
 			},
 		},
 		{
+			"WithLevelOnlyColours",
+			&OutputConfig{UseColors: true, UseEmojis: true, UseFormatting: true, DisableOutput: false, ColorizeLevelOnly: true},
+			map[OutputLevel]string{
+				LevelHeader:  fmt.Sprintf("\n%s%s=== Test Header ===%s\n", ColorBold, ColorCyan, ColorReset),
+				LevelStage:   fmt.Sprintf("%s%s🔧 %sTest Stage\n", ColorBold, ColorBlue, ColorReset),
+				LevelSuccess: fmt.Sprintf("%s%s✅ %sTest Success\n", ColorBold, ColorGreen, ColorReset),
+				LevelError:   fmt.Sprintf("%s%s❌ %sTest Error\n", ColorBold, ColorRed, ColorReset),
+				LevelWarning: fmt.Sprintf("%s%s⚠️  %sTest Warning\n", ColorBold, ColorYellow, ColorReset),
+				LevelInfo:    fmt.Sprintf("%sTest Info%s\n", ColorBold, ColorReset),
+			},
+		},
+		{
 			"WithColorsOnly",
 			&OutputConfig{UseColors: true, UseEmojis: false, UseFormatting: true, DisableOutput: false},
 			map[OutputLevel]string{
@@ -125,28 +137,32 @@ func generateExpectedOutput(level OutputLevel, message string, config *OutputCon
 		return message
 	}
 
-	var prefix, color string
+	if level == LevelHeader {
+		if config.UseColors {
+			color := outputColors[level]
+			return fmt.Sprintf(coloredHeaderFormat, ColorBold, color, message, ColorReset)
+		}
+		return fmt.Sprintf(headerFormat, message)
+	}
+
+	var prefix string
+	var color string
 
 	if config.UseColors && config.UseEmojis && config.UseFormatting {
 		prefix = outputEmojis[level]
 		color = outputColors[level]
-		if level == LevelHeader {
-			return fmt.Sprintf(coloredHeaderFormat, ColorBold, color, message, ColorReset)
-		}
-	} else if config.UseColors {
-		prefix = outputPrefixes[level]
-		color = outputColors[level]
-		if level == LevelHeader {
-			return fmt.Sprintf(coloredHeaderFormat, ColorBold, color, message, ColorReset)
-		}
 	} else {
 		prefix = outputPrefixes[level]
-		if level == LevelHeader {
-			return fmt.Sprintf(prefix, message)
+		if config.UseColors {
+			color = outputColors[level]
 		}
 	}
 
 	if config.UseColors && config.UseFormatting {
+		if config.ColorizeLevelOnly && color != "" && prefix != "" {
+			coloredPrefix := fmt.Sprintf("%s%s%s%s", ColorBold, color, prefix, ColorReset)
+			return fmt.Sprintf("%s%s\n", coloredPrefix, message)
+		}
 		return fmt.Sprintf("%s%s%s%s%s\n", ColorBold, color, prefix, message, ColorReset)
 	}
 
@@ -286,9 +302,19 @@ func TestPrintAlreadyAvailable_AllConfigurations(t *testing.T) {
 			fmt.Sprintf("%s%s💙 Feature is available%s\n", ColorBold, ColorBlue, ColorReset),
 		},
 		{
+			"WithColoursAndEmojis_LevelOnly",
+			&OutputConfig{UseColors: true, UseEmojis: true, UseFormatting: true, DisableOutput: false, ColorizeLevelOnly: true},
+			fmt.Sprintf("%s%s💙 %sFeature is available\n", ColorBold, ColorBlue, ColorReset),
+		},
+		{
 			"WithColours",
 			&OutputConfig{UseColors: true, UseEmojis: false, UseFormatting: true, DisableOutput: false},
 			fmt.Sprintf("%s%s[AVAILABLE] Feature is available%s\n", ColorBold, ColorBlue, ColorReset),
+		},
+		{
+			"WithColours_LevelOnly",
+			&OutputConfig{UseColors: true, UseEmojis: false, UseFormatting: true, DisableOutput: false, ColorizeLevelOnly: true},
+			fmt.Sprintf("%s%s[AVAILABLE] %sFeature is available\n", ColorBold, ColorBlue, ColorReset),
 		},
 		{
 			"WithEmojisAndNoColours", // TODO: Currently not supported, emojis are supported only when colours are enabled
@@ -333,6 +359,24 @@ func TestPrintProgress_AllScenarios(t *testing.T) {
 		expected := fmt.Sprintf("\r%s%s[3/10] 30%% - Processing%s\n", ColorBold, ColorCyan, ColorReset)
 		if output != expected {
 			t.Errorf("PrintProgress() = %q, want %q", output, expected)
+		}
+	})
+
+	t.Run("WithColorsLevelOnly", func(t *testing.T) {
+		handler := NewOutputHandler(&OutputConfig{
+			UseColors:         true,
+			UseEmojis:         true,
+			UseFormatting:     true,
+			DisableOutput:     false,
+			ColorizeLevelOnly: true,
+		})
+
+		output := captureOutput(func() {
+			handler.PrintProgress(3, 10, "Processing")
+		})
+		expected := fmt.Sprintf("\r%s%s[3/10] 30%% - %sProcessing\n", ColorBold, ColorCyan, ColorReset)
+		if output != expected {
+			t.Errorf("PrintProgress() level-only = %q, want %q", output, expected)
 		}
 	})
 
@@ -509,6 +553,40 @@ func TestConfirm_AllScenarios(t *testing.T) {
 	}
 }
 
+func TestConfirm_LevelOnlyColours(t *testing.T) {
+	setupSupportedTerminal(t)
+
+	handler := NewOutputHandler(&OutputConfig{
+		UseColors:         true,
+		UseEmojis:         true,
+		UseFormatting:     true,
+		DisableOutput:     false,
+		ColorizeLevelOnly: true,
+	})
+
+	oldStdin := os.Stdin
+	defer func() {
+		os.Stdin = oldStdin
+	}()
+
+	r, w, _ := os.Pipe()
+	os.Stdin = r
+
+	go func() {
+		w.WriteString("y\n")
+		w.Close()
+	}()
+
+	output := captureOutput(func() {
+		handler.Confirm("Test confirmation")
+	})
+
+	expected := fmt.Sprintf("%s%s?%s Test confirmation (y/N): ", ColorBold, ColorYellow, ColorReset)
+	if output != expected {
+		t.Errorf("Confirm() level-only output = %q, want %q", output, expected)
+	}
+}
+
 func TestPrintProgress_ExtendedEdgeCases(t *testing.T) {
 	setupSupportedTerminal(t)
 
@@ -563,6 +641,24 @@ func TestPrintProgress_ExtendedEdgeCases(t *testing.T) {
 		expected := fmt.Sprintf("\r%s%s[3/10] 30%% - Colored progress%s\n", ColorBold, ColorCyan, ColorReset)
 		if output != expected {
 			t.Errorf("PrintProgress with colors = %q, want %q", output, expected)
+		}
+	})
+
+	t.Run("WithColorsLevelOnly", func(t *testing.T) {
+		coloredHandler := NewOutputHandler(&OutputConfig{
+			UseColors:         true,
+			UseEmojis:         true,
+			UseFormatting:     true,
+			DisableOutput:     false,
+			ColorizeLevelOnly: true,
+		})
+
+		output := captureOutput(func() {
+			coloredHandler.PrintProgress(3, 10, "Colored progress")
+		})
+		expected := fmt.Sprintf("\r%s%s[3/10] 30%% - %sColored progress\n", ColorBold, ColorCyan, ColorReset)
+		if output != expected {
+			t.Errorf("PrintProgress with level-only colors = %q, want %q", output, expected)
 		}
 	})
 
