@@ -15,6 +15,7 @@ go get github.com/rocajuanma/palantir
 - Emoji support
 - Progress indicators
 - Interactive confirmations
+- Level-only colour mode for subtle highlight of status prefixes
 
 
 <p align="center">

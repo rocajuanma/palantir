@@ -25,6 +25,30 @@ func main() {
 		handler.PrintInfo("User declined")
 	}
 
+	// Setup configuration that only colours the output level indicator
+	levelColoursConfig := &terminal.OutputConfig{
+		UseColors:         true,
+		UseEmojis:         false,
+		UseFormatting:     true,
+		DisableOutput:     false,
+		ColorizeLevelOnly: true,
+	}
+
+	levelColours := terminal.NewOutputHandler(levelColoursConfig)
+	levelColours.PrintHeader("Palantir Demo(Level Colours Only)")
+	levelColours.PrintInfo("This is an info message")
+	levelColours.PrintSuccess("Operation completed successfully!")
+	levelColours.PrintWarning("This is a warning message")
+	levelColours.PrintError("This is an error message")
+	levelColours.PrintStage("Processing stage 1")
+	levelColours.PrintAlreadyAvailable("Feature is already available")
+	levelColours.PrintProgress(3, 10, "Processing items")
+	if levelColours.Confirm("Do you want to continue?") {
+		levelColours.PrintSuccess("User confirmed!")
+	} else {
+		levelColours.PrintInfo("User declined")
+	}
+
 	// Setup configurations with colours only
 	coloursOnlyConfig := &terminal.OutputConfig{
 		UseColors:     true,
