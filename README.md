@@ -1,6 +1,9 @@
 # Palantir
 
-A simple Go package for terminal output with colors, emojis, and formatting.
+A lightweight Go package for enhanced terminal output, featuring colored text, emoji indicators, and consistent formatting.
+
+> In *The Lord of the Rings* lore, a Palantír is a seeing-stone that enables users to communicate and observe distant events. Similarly, this package empowers you to gain clearer insights into your program's output, making it easier to monitor and understand what's happening.
+
 
 ## Installation
 
@@ -11,11 +14,10 @@ go get github.com/rocajuanma/palantir
 ## Features
 
 - Multiple output levels
-- Colored output
+- Colored output: fully-coloured line, level-only or no-colour
 - Emoji support
 - Progress indicators
 - Interactive confirmations
-- Level-only colour mode for subtle highlight of status prefixes
 
 
 <p align="center">
