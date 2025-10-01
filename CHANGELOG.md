@@ -5,7 +5,8 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 ### Added
-
+- New level-only coloured option (Thank you, @muyiwaolurin!)
+  
 ### Changed
 
 ### Fixed
