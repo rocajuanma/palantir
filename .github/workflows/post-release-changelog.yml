@@ -1,0 +1,9 @@
+name: Post-Release Changelog Update
+on:
+  release:
+    types: [published]
+jobs:
+  update-changelog:
+    uses: rocajuanma/simple-release/workflows/reusable-post-release-changelog.yml@v0.1.0
+    secrets:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Required: Creates PR and updates changelog

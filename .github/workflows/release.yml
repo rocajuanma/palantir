@@ -1,0 +1,11 @@
+name: Release
+on:
+  push:
+    tags: ['v*.*.*']
+jobs:
+  release:
+    uses: rocajuanma/simple-release/workflows/reusable-release.yml@v0.1.0
+    with:
+      build-artifacts: 'dist/* install.sh'  # Your build outputs
+    secrets:
+      RELEASE_TOKEN: ${{ secrets.GITHUB_TOKEN }}
