@@ -4,8 +4,8 @@ on:
     tags: ['v*.*.*']
 jobs:
   release:
-    uses: rocajuanma/simple-release/workflows/reusable-release.yml@v0.1.0
+    uses: rocajuanma/simple-release/workflows/reusable-release.yml@latest
     with:
-      build-artifacts: 'dist/* install.sh'  # Your build outputs
+      changelog-path: 'CHANGELOG.md'  # Optional: Changelog path
     secrets:
       RELEASE_TOKEN: ${{ secrets.GITHUB_TOKEN }}
