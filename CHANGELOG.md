@@ -5,10 +5,12 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 ### Added
-
+- New level-only coloured option (Thank you, @muyiwaolurin!)
+  
 ### Changed
 
 ### Fixed
+- Auto-generated Release and CHANGELOG updates using rocajuanma/simple-release
 
 ## [0.2.0] - 2025-09-30
 

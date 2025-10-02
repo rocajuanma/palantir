@@ -1,0 +1,11 @@
+name: Release
+on:
+  push:
+    tags: ['v*.*.*']
+jobs:
+  release:
+    uses: rocajuanma/simple-release/workflows/reusable-release.yml@latest
+    with:
+      changelog-path: 'CHANGELOG.md'  # Optional: Changelog path
+    secrets:
+      RELEASE_TOKEN: ${{ secrets.GITHUB_TOKEN }}
