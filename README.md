@@ -1,4 +1,8 @@
-# Palantir
+<div align="center">
+  <img src="assets/palantir.png" alt="Palantir Logo" width="200" style="border-radius: 50%;">
+  <h1>Palantir</h1>
+</div>
+<div align="center">
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Go Report Card](https://goreportcard.com/badge/github.com/rocajuanma/palantir)](https://goreportcard.com/report/github.com/rocajuanma/palantir)
@@ -6,6 +10,7 @@
 [![GitHub release](https://img.shields.io/github/release/rocajuanma/palantir.svg)](https://github.com/rocajuanma/palantir/releases)
 
 A lightweight Go package for enhanced terminal output, featuring colored text, emoji indicators, and consistent formatting.
+</div>
 
 > In *The Lord of the Rings* lore, a Palantír is a seeing-stone that enables users to communicate and observe distant events. Similarly, this package empowers you to gain clearer insights into your program's output, making it easier to monitor and understand what's happening.
 
