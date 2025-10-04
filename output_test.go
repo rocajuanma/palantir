@@ -1,4 +1,4 @@
-package terminal
+package palantir
 
 import (
 	"bytes"

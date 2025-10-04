@@ -1,4 +1,4 @@
-package terminal
+package palantir
 
 // Color constants for terminal output
 const (

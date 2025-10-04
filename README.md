@@ -16,6 +16,47 @@ A lightweight Go package for enhanced terminal output, featuring colored text, e
 go get github.com/rocajuanma/palantir
 ```
 
+## Usage
+
+### Basic Usage
+
+```go
+package main
+
+import (
+    "github.com/rocajuanma/palantir"
+)
+
+func main() {
+    // Create a default output handler
+    handler := palantir.NewDefaultOutputHandler()
+    
+    // Use different output levels
+    handler.PrintHeader("My Application")
+    handler.PrintInfo("Starting process...")
+    handler.PrintSuccess("Operation completed!")
+    handler.PrintWarning("This is a warning")
+    handler.PrintError("Something went wrong")
+    handler.PrintStage("Processing stage 1")
+}
+```
+
+### Custom Configuration
+
+```go
+// Create a custom configuration
+config := &palantir.OutputConfig{
+    UseColors:         true,
+    UseEmojis:         false,
+    UseFormatting:     true,
+    DisableOutput:     false,
+    VerboseMode:       false,
+    ColorizeLevelOnly: true,
+}
+
+handler := palantir.NewOutputHandler(config)
+```
+
 ## Features
 
 - Multiple output levels
@@ -26,8 +67,8 @@ go get github.com/rocajuanma/palantir
 
 
 <p align="center">
-  <img src="./cmd/terminal/terminal.png" alt="Palantir Demo">
+  <img src="./cmd/demo/terminal.png" alt="Palantir Demo">
 </p>
 
 
-See the [Palantir terminal demo](cmd/terminal/README.md) for usage examples.
+See the [Palantir terminal demo](cmd/demo/README.md) for usage examples.

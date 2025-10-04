@@ -6,10 +6,10 @@ A simple demonstration of the Palantir terminal formatting package.
 
 ```bash
 # From project root(recommended)
-go run ./cmd/terminal
+go run ./cmd/demo
 
 # Or build and run
-go build -o palantir-demo ./cmd/terminal
+go build -o palantir-demo ./cmd/demo
 ./palantir-demo
 ```
 
