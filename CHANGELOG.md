@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 ### Added
+
+### Changed
+
+### Fixed
+
+## [0.5.0] - 2025-10-03
+
+### Added
 - New level-only coloured option (Thank you, @muyiwaolurin!)
 - Workflows to auto-generated Release and CHANGELOG updates using rocajuanma/simple-release
   
@@ -12,7 +20,7 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 - Update correct workflows @main tag usage
- 
+
 ## [0.2.0] - 2025-09-30
 
 ### Added
