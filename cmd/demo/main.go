@@ -1,12 +1,12 @@
 package main
 
 import (
-	"github.com/rocajuanma/palantir/terminal"
+	"github.com/rocajuanma/palantir"
 )
 
 func main() {
 	// Initialize the default output handler(all features enabled)
-	handler := terminal.NewDefaultOutputHandler()
+	handler := palantir.NewDefaultOutputHandler()
 
 	// Showcases the different output levels when default configurations are used.
 	handler.PrintHeader("Palantir Demo(Default)")
@@ -26,7 +26,7 @@ func main() {
 	}
 
 	// Setup configuration that only colours the output level indicator
-	levelColoursConfig := &terminal.OutputConfig{
+	levelColoursConfig := &palantir.OutputConfig{
 		UseColors:         true,
 		UseEmojis:         false,
 		UseFormatting:     true,
@@ -34,7 +34,7 @@ func main() {
 		ColorizeLevelOnly: true,
 	}
 
-	levelColours := terminal.NewOutputHandler(levelColoursConfig)
+	levelColours := palantir.NewOutputHandler(levelColoursConfig)
 	levelColours.PrintHeader("Palantir Demo(Level Colours Only)")
 	levelColours.PrintInfo("This is an info message")
 	levelColours.PrintSuccess("Operation completed successfully!")
@@ -50,14 +50,14 @@ func main() {
 	}
 
 	// Setup configurations with colours only
-	coloursOnlyConfig := &terminal.OutputConfig{
+	coloursOnlyConfig := &palantir.OutputConfig{
 		UseColors:     true,
 		UseEmojis:     false,
 		UseFormatting: true,
 		DisableOutput: false,
 	}
 
-	onlyColours := terminal.NewOutputHandler(coloursOnlyConfig)
+	onlyColours := palantir.NewOutputHandler(coloursOnlyConfig)
 	onlyColours.PrintHeader("Palantir Demo(Colours Only)")
 	onlyColours.PrintInfo("This is an info message")
 	onlyColours.PrintSuccess("Operation completed successfully!")
@@ -73,13 +73,13 @@ func main() {
 	}
 
 	// Setup configurations without colours
-	noColoursConfig := &terminal.OutputConfig{
+	noColoursConfig := &palantir.OutputConfig{
 		UseColors:     false,
 		UseEmojis:     false,
 		UseFormatting: false,
 		DisableOutput: false,
 	}
-	noColours := terminal.NewOutputHandler(noColoursConfig)
+	noColours := palantir.NewOutputHandler(noColoursConfig)
 	noColours.PrintHeader("Palantir Demo(Without Colours)")
 	noColours.PrintInfo("This is an info message")
 	noColours.PrintSuccess("Operation completed successfully!")

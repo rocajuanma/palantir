@@ -1,10 +1,8 @@
-package terminal
+package palantir
 
 import (
 	"fmt"
 	"os"
-
-	"github.com/rocajuanma/palantir/interfaces"
 )
 
 // OutputLevel represents different levels of output
@@ -18,6 +16,21 @@ const (
 	LevelStage
 	LevelHeader
 )
+
+// OutputHandler defines the interface for terminal output operations
+type OutputHandler interface {
+	PrintHeader(message string)
+	PrintStage(message string)
+	PrintSuccess(message string)
+	PrintError(format string, args ...interface{})
+	PrintWarning(format string, args ...interface{})
+	PrintInfo(format string, args ...interface{})
+	PrintAlreadyAvailable(format string, args ...interface{})
+	PrintProgress(current, total int, message string)
+	Confirm(message string) bool
+	IsSupported() bool
+	Disable()
+}
 
 // OutputConfig holds configuration for output formatting
 type OutputConfig struct {
@@ -35,7 +48,7 @@ type outputHandler struct {
 }
 
 // NewDefaultOutputHandler creates a new outputHandler with default configurations
-func NewDefaultOutputHandler() interfaces.OutputHandler {
+func NewDefaultOutputHandler() OutputHandler {
 	return &outputHandler{
 		config: &OutputConfig{
 			UseColors:         true,
@@ -215,15 +228,15 @@ func (oh *outputHandler) Disable() {
 }
 
 // Global output handler instance
-var globalOutputHandler interfaces.OutputHandler = NewDefaultOutputHandler()
+var globalOutputHandler OutputHandler = NewDefaultOutputHandler()
 
 // SetGlobalOutputHandler sets the global output handler
-func SetGlobalOutputHandler(handler interfaces.OutputHandler) {
+func SetGlobalOutputHandler(handler OutputHandler) {
 	globalOutputHandler = handler
 }
 
 // GetGlobalOutputHandler returns the global output handler
-func GetGlobalOutputHandler() interfaces.OutputHandler {
+func GetGlobalOutputHandler() OutputHandler {
 	if globalOutputHandler == nil {
 		globalOutputHandler = NewDefaultOutputHandler()
 	}
