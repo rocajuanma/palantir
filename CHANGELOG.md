@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 ### Added
+
+### Changed
+
+### Fixed
+
+## [1.0.0] - 2025-10-03
+
+### Added
 - Usage section in README with basic usage examples, custom configuration, and global handler examples
 - Palantir logo in README header for better visual branding
 
