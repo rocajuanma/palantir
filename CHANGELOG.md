@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 - Usage section in README with basic usage examples, custom configuration, and global handler examples
+- Palantir logo in README header for better visual branding
 
 ### Changed
 - **Major restructuring**: Consolidated all code into a single `palantir` package
