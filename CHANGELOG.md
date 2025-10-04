@@ -5,10 +5,18 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 ### Added
+- Usage section in README with basic usage examples, custom configuration, and global handler examples
 
 ### Changed
+- **Major restructuring**: Consolidated all code into a single `palantir` package
+  - Moved `constants.go`, `output.go`, and `output_test.go` to root package
+  - Moved demo application from `cmd/terminal/` to `cmd/demo/`
+  - Updated all imports to use the unified package structure
+  - Simplified package structure for better usability
 
 ### Fixed
+- Fixed image path in README from `cmd/terminal/terminal.png` to `cmd/demo/terminal.png`
+- Fixed demo link in README from `cmd/terminal/README.md` to `cmd/demo/README.md`
 
 ## [0.5.0] - 2025-10-03
 
