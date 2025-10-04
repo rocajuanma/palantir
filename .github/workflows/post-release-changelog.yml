@@ -4,6 +4,6 @@ on:
     types: [release-published]
 jobs:
   update-changelog:
-    uses: rocajuanma/simple-release/.github/workflows/reusable-post-release-changelog.yml@latest
+    uses: rocajuanma/simple-release/.github/workflows/reusable-post-release-changelog.yml@main
     secrets:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Required: Creates PR and updates changelog
