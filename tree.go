@@ -2,7 +2,6 @@ package palantir
 
 import (
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"sort"
@@ -177,23 +176,6 @@ func (t *genericTree[T]) Size() int {
 	return count
 }
 
-// TreeBuilder defines the interface for building trees from different sources
-type TreeBuilder[T any] interface {
-	Build(source string) (Tree[T], error)
-}
-
-// TreeRenderer defines the interface for rendering trees in different formats
-type TreeRenderer[T any] interface {
-	Render(tree Tree[T], writer io.Writer) error
-}
-
-// NodeStyler defines the interface for customizing node appearance
-type NodeStyler[T any] interface {
-	Style(node *Node[T]) string
-	GetTreeChar(node *Node[T], isLast bool) string
-	GetPrefix(node *Node[T], isLast bool, isRoot bool) string
-}
-
 // FileNode represents a file or directory in the filesystem tree
 type FileNode struct {
 	Name    string
@@ -278,15 +260,79 @@ func ShowHierarchy(basePath, targetDir string) (error, bool) {
 		return a.Data.Name < b.Data.Name
 	})
 
-	// Create filesystem styler and renderer
-	styler := NewFileSystemStyler()
-	renderer := NewTreeRenderer(styler)
-
-	// Render the tree
-	err = renderer.Render(tree, os.Stdout)
-	if err != nil {
-		return fmt.Errorf("failed to render tree: %w", err), false
-	}
+	// Render the tree directly
+	printTree(tree.Root(), "", true, true)
 
 	return nil, true
+}
+
+// printTree recursively prints a tree node with ASCII art and colors
+func printTree(node *Node[FileNode], prefix string, isLast bool, isRoot bool) {
+	if !isRoot {
+		// Choose the appropriate tree character
+		var treeChar string
+		if isLast {
+			treeChar = "└── "
+		} else {
+			treeChar = "├── "
+		}
+
+		// Style the node name
+		styledName := styleFileNode(node)
+
+		// Print the current node
+		fmt.Printf("%s%s%s\n", prefix, treeChar, styledName)
+	}
+
+	// Print children
+	if len(node.Children) > 0 {
+		for i, child := range node.Children {
+			isChildLast := i == len(node.Children)-1
+
+			// Calculate prefix for child
+			var childPrefix string
+			if isRoot {
+				childPrefix = ""
+			} else {
+				if isLast {
+					childPrefix = prefix + "    "
+				} else {
+					childPrefix = prefix + "│   "
+				}
+			}
+
+			printTree(child, childPrefix, isChildLast, false)
+		}
+	}
+}
+
+// styleFileNode styles a filesystem node based on OutputConfig
+func styleFileNode(node *Node[FileNode]) string {
+	outputConfig := GetGlobalOutputHandler().(*outputHandler).config
+
+	if !outputConfig.UseColors {
+		return node.Data.Name
+	}
+
+	// Get file node data
+	fileNode := node.Data
+
+	if fileNode.IsDir {
+		return fmt.Sprintf("%s%s%s%s", ColorBold, ColorBlue, fileNode.Name, ColorReset)
+	}
+
+	// Color files based on extension
+	ext := strings.ToLower(filepath.Ext(fileNode.Name))
+	switch ext {
+	case ".json", ".yaml", ".yml", ".toml":
+		return fmt.Sprintf("%s%s%s", ColorGreen, fileNode.Name, ColorReset)
+	case ".md", ".txt", ".log":
+		return fmt.Sprintf("%s%s%s", ColorCyan, fileNode.Name, ColorReset)
+	case ".sh", ".zsh", ".bash":
+		return fmt.Sprintf("%s%s%s", ColorYellow, fileNode.Name, ColorReset)
+	case ".go":
+		return fmt.Sprintf("%s%s%s", ColorPurple, fileNode.Name, ColorReset)
+	default:
+		return fileNode.Name
+	}
 }
