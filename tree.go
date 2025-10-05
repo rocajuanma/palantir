@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"sort"
+	"strings"
 )
 
 // Tree represents a generic tree structure
@@ -192,13 +194,72 @@ type NodeStyler[T any] interface {
 	GetPrefix(node *Node[T], isLast bool, isRoot bool) string
 }
 
-// ShowHierarchy displays a tree structure of files/directories using the new generic tree system
-func ShowHierarchy(basePath, targetDir string) (error, bool) {
-	// Create filesystem tree builder with default config
-	builder := NewFileSystemTreeBuilder()
+// FileNode represents a file or directory in the filesystem tree
+type FileNode struct {
+	Name    string
+	Path    string
+	IsDir   bool
+	Size    int64
+	ModTime int64
+}
 
-	// Build the tree
-	tree, err := builder.Build(basePath)
+// ShowHierarchy displays a tree structure of files/directories using the generic tree system
+func ShowHierarchy(basePath, targetDir string) (error, bool) {
+	// Get root directory info
+	rootInfo, err := os.Stat(basePath)
+	if err != nil {
+		return fmt.Errorf("failed to stat path: %w", err), false
+	}
+
+	// Create root FileNode data
+	rootData := FileNode{
+		Name:    rootInfo.Name(),
+		Path:    basePath,
+		IsDir:   rootInfo.IsDir(),
+		Size:    rootInfo.Size(),
+		ModTime: rootInfo.ModTime().Unix(),
+	}
+
+	// Create generic tree with FileNode data
+	tree := NewTree(rootData, rootInfo.Name())
+
+	// Walk filesystem and build tree directly
+	err = filepath.Walk(basePath, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if path == basePath {
+			return nil // Skip root directory itself
+		}
+
+		// Skip hidden files
+		if strings.HasPrefix(filepath.Base(path), ".") {
+			if info.IsDir() {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+
+		// Get relative path and split into components
+		relPath, err := filepath.Rel(basePath, path)
+		if err != nil {
+			return err
+		}
+		parts := strings.Split(relPath, string(filepath.Separator))
+
+		// Create FileNode data
+		fileData := FileNode{
+			Name:    info.Name(),
+			Path:    path,
+			IsDir:   info.IsDir(),
+			Size:    info.Size(),
+			ModTime: info.ModTime().Unix(),
+		}
+
+		// Insert into generic tree
+		return tree.Insert(parts, fileData)
+	})
+
 	if err != nil {
 		return fmt.Errorf("failed to build tree: %w", err), false
 	}
@@ -209,10 +270,16 @@ func ShowHierarchy(basePath, targetDir string) (error, bool) {
 		return nil, false // No hierarchy needed
 	}
 
-	// Create filesystem styler with default config
-	styler := NewFileSystemStyler()
+	// Sort tree (directories first, then alphabetically)
+	tree.Sort(func(a, b *Node[FileNode]) bool {
+		if a.Data.IsDir != b.Data.IsDir {
+			return a.Data.IsDir
+		}
+		return a.Data.Name < b.Data.Name
+	})
 
-	// Create tree renderer
+	// Create filesystem styler and renderer
+	styler := NewFileSystemStyler()
 	renderer := NewTreeRenderer(styler)
 
 	// Render the tree
