@@ -72,7 +72,7 @@ handler := palantir.NewOutputHandler(config)
 
 
 <p align="center">
-  <img src="./cmd/demo/terminal.png" alt="Palantir Demo">
+  <img src="./assets/terminal.png" alt="Palantir Demo">
 </p>
 
 

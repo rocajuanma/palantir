@@ -25,6 +25,6 @@ go build -o palantir-demo ./cmd/demo
 
 
 <p align="center">
-  <img src="terminal.png" alt="Palantir Demo">
+  <img src="../../assets/terminal.png" alt="Palantir Demo">
 </p>
 
