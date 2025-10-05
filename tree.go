@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-// TreeNode represents a node in the file tree
+// TreeNode represents a node in the tree
 type TreeNode struct {
 	Name     string
 	Path     string
@@ -16,36 +16,23 @@ type TreeNode struct {
 	Children []*TreeNode
 }
 
-// showDirectoryTree displays a tree structure of files/directories
-func showDirectoryTree(basePath, targetDir string) error {
-	// Build the tree structure
+// ShowHierarchy displays a tree structure of files/directories
+func ShowHierarchy(basePath, targetDir string) (error, bool) {
 	root, err := buildTree(basePath)
 	if err != nil {
-		return errors.NewFileSystemError(constants.OpShow, "build-tree", err)
+		return fmt.Errorf("failed to build tree: %w", err), false
 	}
 
-	// If there's only one file at root level, display its content directly
 	if len(root.Children) == 1 && !root.Children[0].IsDir {
-		return showSingleFile(root.Children[0].Path, targetDir)
+		return nil, false // if there is only one node, return false because no hierarchy is needed
 	}
-	o := GetGlobalOutputHandler()
-	o.PrintHeader(fmt.Sprintf("Configuration Directory: %s", targetDir))
-	o.PrintInfo("Path: %s\n", basePath)
-
-	// Display the tree structure
-	o.PrintInfo("Directory structure:\n")
 
 	// Sort children for consistent display
 	sortChildren(root)
 
 	// Print the tree starting from root
 	printTreeNode(root, "", true, true)
-
-	o.PrintInfo("\n💡 To view a specific file, you can use:")
-	o.PrintInfo("   • cat %s/[filename]", basePath)
-	o.PrintInfo("   • Or navigate to the directory and explore manually")
-
-	return nil
+	return nil, true
 }
 
 // buildTree recursively builds a tree structure from the filesystem
@@ -191,20 +178,4 @@ func printTreeNode(node *TreeNode, prefix string, isLast bool, isRoot bool) {
 			printTreeNode(child, childPrefix, isChildLast, false)
 		}
 	}
-}
-
-// showSingleFile displays the content of a single configuration file
-func showSingleFile(filePath, targetDir string) error {
-	o := getOutputHandler()
-	o.PrintHeader(fmt.Sprintf("Configuration: %s", targetDir))
-	o.PrintInfo("File: %s\n", filepath.Base(filePath))
-
-	// Read and display the file content
-	content, err := os.ReadFile(filePath)
-	if err != nil {
-		return errors.NewFileSystemError(constants.OpShow, "read-config-file", err)
-	}
-
-	fmt.Print(string(content))
-	return nil
 }
