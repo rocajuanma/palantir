@@ -2,180 +2,224 @@ package palantir
 
 import (
 	"fmt"
+	"io"
 	"os"
-	"path/filepath"
 	"sort"
-	"strings"
 )
 
-// TreeNode represents a node in the tree
-type TreeNode struct {
-	Name     string
-	Path     string
-	IsDir    bool
-	Children []*TreeNode
+// Tree represents a generic tree structure
+type Tree[T any] interface {
+	Root() *Node[T]
+	Insert(path []string, data T) error
+	Find(path []string) (*Node[T], bool)
+	Traverse(visitor func(*Node[T]) bool)
+	Sort(comparator func(a, b *Node[T]) bool)
+	Size() int
 }
 
-// ShowHierarchy displays a tree structure of files/directories
+// Node represents a node in the generic tree
+type Node[T any] struct {
+	Data     T
+	Name     string
+	Children []*Node[T]
+	Parent   *Node[T]
+}
+
+// NewNode creates a new tree node
+func NewNode[T any](name string, data T) *Node[T] {
+	return &Node[T]{
+		Data:     data,
+		Name:     name,
+		Children: make([]*Node[T], 0),
+		Parent:   nil,
+	}
+}
+
+// AddChild adds a child node to this node
+func (n *Node[T]) AddChild(child *Node[T]) {
+	child.Parent = n
+	n.Children = append(n.Children, child)
+}
+
+// FindChild finds a child node by name
+func (n *Node[T]) FindChild(name string) (*Node[T], bool) {
+	for _, child := range n.Children {
+		if child.Name == name {
+			return child, true
+		}
+	}
+	return nil, false
+}
+
+// IsLeaf returns true if the node has no children
+func (n *Node[T]) IsLeaf() bool {
+	return len(n.Children) == 0
+}
+
+// Depth returns the depth of the node in the tree
+func (n *Node[T]) Depth() int {
+	depth := 0
+	current := n.Parent
+	for current != nil {
+		depth++
+		current = current.Parent
+	}
+	return depth
+}
+
+// Path returns the path from root to this node
+func (n *Node[T]) Path() []string {
+	if n.Parent == nil {
+		return []string{n.Name}
+	}
+	return append(n.Parent.Path(), n.Name)
+}
+
+// genericTree implements the Tree interface
+type genericTree[T any] struct {
+	root *Node[T]
+}
+
+// NewTree creates a new generic tree
+func NewTree[T any](rootData T, rootName string) Tree[T] {
+	return &genericTree[T]{
+		root: NewNode(rootName, rootData),
+	}
+}
+
+// Root returns the root node
+func (t *genericTree[T]) Root() *Node[T] {
+	return t.root
+}
+
+// Insert inserts a node at the specified path
+func (t *genericTree[T]) Insert(path []string, data T) error {
+	if len(path) == 0 {
+		return fmt.Errorf("path cannot be empty")
+	}
+
+	current := t.root
+	for _, name := range path[:len(path)-1] {
+		child, found := current.FindChild(name)
+		if !found {
+			// Create intermediate node with zero value
+			var zero T
+			child = NewNode(name, zero)
+			current.AddChild(child)
+		}
+		current = child
+	}
+
+	// Add the final node
+	finalName := path[len(path)-1]
+	finalNode := NewNode(finalName, data)
+	current.AddChild(finalNode)
+	return nil
+}
+
+// Find finds a node at the specified path
+func (t *genericTree[T]) Find(path []string) (*Node[T], bool) {
+	current := t.root
+	for _, name := range path {
+		child, found := current.FindChild(name)
+		if !found {
+			return nil, false
+		}
+		current = child
+	}
+	return current, true
+}
+
+// Traverse traverses the tree and calls visitor for each node
+func (t *genericTree[T]) Traverse(visitor func(*Node[T]) bool) {
+	t.traverseNode(t.root, visitor)
+}
+
+// traverseNode recursively traverses a node and its children
+func (t *genericTree[T]) traverseNode(node *Node[T], visitor func(*Node[T]) bool) {
+	if !visitor(node) {
+		return
+	}
+	for _, child := range node.Children {
+		t.traverseNode(child, visitor)
+	}
+}
+
+// Sort sorts the tree using the provided comparator
+func (t *genericTree[T]) Sort(comparator func(a, b *Node[T]) bool) {
+	t.sortNode(t.root, comparator)
+}
+
+// sortNode recursively sorts a node and its children
+func (t *genericTree[T]) sortNode(node *Node[T], comparator func(a, b *Node[T]) bool) {
+	if len(node.Children) == 0 {
+		return
+	}
+
+	sort.Slice(node.Children, func(i, j int) bool {
+		return comparator(node.Children[i], node.Children[j])
+	})
+
+	for _, child := range node.Children {
+		t.sortNode(child, comparator)
+	}
+}
+
+// Size returns the total number of nodes in the tree
+func (t *genericTree[T]) Size() int {
+	count := 0
+	t.Traverse(func(node *Node[T]) bool {
+		count++
+		return true
+	})
+	return count
+}
+
+// TreeBuilder defines the interface for building trees from different sources
+type TreeBuilder[T any] interface {
+	Build(source string) (Tree[T], error)
+}
+
+// TreeRenderer defines the interface for rendering trees in different formats
+type TreeRenderer[T any] interface {
+	Render(tree Tree[T], writer io.Writer) error
+}
+
+// NodeStyler defines the interface for customizing node appearance
+type NodeStyler[T any] interface {
+	Style(node *Node[T]) string
+	GetTreeChar(node *Node[T], isLast bool) string
+	GetPrefix(node *Node[T], isLast bool, isRoot bool) string
+}
+
+// ShowHierarchy displays a tree structure of files/directories using the new generic tree system
 func ShowHierarchy(basePath, targetDir string) (error, bool) {
-	root, err := buildTree(basePath)
+	// Create filesystem tree builder with default config
+	builder := NewFileSystemTreeBuilder()
+
+	// Build the tree
+	tree, err := builder.Build(basePath)
 	if err != nil {
 		return fmt.Errorf("failed to build tree: %w", err), false
 	}
 
-	if len(root.Children) == 1 && !root.Children[0].IsDir {
-		return nil, false // if there is only one node, return false because no hierarchy is needed
+	// Check if tree has only one node and it's not a directory
+	root := tree.Root()
+	if len(root.Children) == 1 && !root.Children[0].Data.IsDir {
+		return nil, false // No hierarchy needed
 	}
 
-	// Sort children for consistent display
-	sortChildren(root)
+	// Create filesystem styler with default config
+	styler := NewFileSystemStyler()
 
-	// Print the tree starting from root
-	printTreeNode(root, "", true, true)
+	// Create tree renderer
+	renderer := NewTreeRenderer(styler)
+
+	// Render the tree
+	err = renderer.Render(tree, os.Stdout)
+	if err != nil {
+		return fmt.Errorf("failed to render tree: %w", err), false
+	}
+
 	return nil, true
-}
-
-// buildTree recursively builds a tree structure from the filesystem
-func buildTree(dirPath string) (*TreeNode, error) {
-	root := &TreeNode{
-		Name:     filepath.Base(dirPath),
-		Path:     dirPath,
-		IsDir:    true,
-		Children: []*TreeNode{},
-	}
-
-	err := filepath.Walk(dirPath, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-
-		// Skip the root directory itself
-		if path == dirPath {
-			return nil
-		}
-
-		// Get relative path from root
-		relPath, err := filepath.Rel(dirPath, path)
-		if err != nil {
-			return err
-		}
-
-		// Split the path into components
-		parts := strings.Split(relPath, string(filepath.Separator))
-
-		// Find or create the parent node
-		current := root
-		for i, part := range parts[:len(parts)-1] {
-			found := false
-			for _, child := range current.Children {
-				if child.Name == part && child.IsDir {
-					current = child
-					found = true
-					break
-				}
-			}
-			if !found {
-				// Create intermediate directory
-				newDir := &TreeNode{
-					Name:     part,
-					Path:     filepath.Join(dirPath, strings.Join(parts[:i+1], string(filepath.Separator))),
-					IsDir:    true,
-					Children: []*TreeNode{},
-				}
-				current.Children = append(current.Children, newDir)
-				current = newDir
-			}
-		}
-
-		// Add the final node
-		finalNode := &TreeNode{
-			Name:  parts[len(parts)-1],
-			Path:  path,
-			IsDir: info.IsDir(),
-		}
-		if info.IsDir() {
-			finalNode.Children = []*TreeNode{}
-		}
-		current.Children = append(current.Children, finalNode)
-
-		return nil
-	})
-
-	return root, err
-}
-
-// sortChildren recursively sorts all children in the tree (directories first, then files, both alphabetically)
-func sortChildren(node *TreeNode) {
-	if node.Children == nil {
-		return
-	}
-
-	// Sort children: directories first, then files, both alphabetically
-	sort.Slice(node.Children, func(i, j int) bool {
-		if node.Children[i].IsDir != node.Children[j].IsDir {
-			return node.Children[i].IsDir // directories come first
-		}
-		return node.Children[i].Name < node.Children[j].Name
-	})
-
-	// Recursively sort children
-	for _, child := range node.Children {
-		sortChildren(child)
-	}
-}
-
-// printTreeNode prints a tree node with ASCII art and colors
-func printTreeNode(node *TreeNode, prefix string, isLast bool, isRoot bool) {
-	if !isRoot {
-		// Choose the appropriate tree character
-		var treeChar string
-		if isLast {
-			treeChar = "└── "
-		} else {
-			treeChar = "├── "
-		}
-
-		// Color the output based on file type
-		var coloredName string
-		if node.IsDir {
-			coloredName = fmt.Sprintf("%s%s%s%s", ColorBold, ColorBlue, node.Name, ColorReset)
-		} else {
-			// Color files based on extension
-			ext := strings.ToLower(filepath.Ext(node.Name))
-			switch ext {
-			case ".json", ".yaml", ".yml", ".toml":
-				coloredName = fmt.Sprintf("%s%s%s", ColorGreen, node.Name, ColorReset)
-			case ".md", ".txt", ".log":
-				coloredName = fmt.Sprintf("%s%s%s", ColorCyan, node.Name, ColorReset)
-			case ".sh", ".zsh", ".bash":
-				coloredName = fmt.Sprintf("%s%s%s", ColorYellow, node.Name, ColorReset)
-			default:
-				coloredName = node.Name
-			}
-		}
-
-		// Print the current node
-		fmt.Printf("%s%s%s\n", prefix, treeChar, coloredName)
-	}
-
-	// Print children
-	if node.Children != nil {
-		for i, child := range node.Children {
-			isChildLast := i == len(node.Children)-1
-
-			// Calculate prefix for child
-			var childPrefix string
-			if isRoot {
-				childPrefix = ""
-			} else {
-				if isLast {
-					childPrefix = prefix + "    "
-				} else {
-					childPrefix = prefix + "│   "
-				}
-			}
-
-			printTreeNode(child, childPrefix, isChildLast, false)
-		}
-	}
 }
