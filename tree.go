@@ -8,6 +8,14 @@ import (
 	"strings"
 )
 
+// Tree display constants
+const (
+	Branch   = "├── "
+	Last     = "└── "
+	Vertical = "│   "
+	Space    = "    "
+)
+
 // TreeNode represents a simple tree node for display purposes only
 type TreeNode struct {
 	Name     string
@@ -32,7 +40,6 @@ func ShowHierarchy(basePath, targetDir string) (error, bool) {
 		return fmt.Errorf("failed to stat path: %w", err), false
 	}
 
-	// Create root node
 	root := &TreeNode{
 		Name: rootInfo.Name(),
 		Data: FileNode{
@@ -42,7 +49,7 @@ func ShowHierarchy(basePath, targetDir string) (error, bool) {
 			Size:    rootInfo.Size(),
 			ModTime: rootInfo.ModTime().Unix(),
 		},
-		Children: []*TreeNode{},
+		Children: nil,
 	}
 
 	// Build tree structure by walking filesystem
@@ -56,10 +63,8 @@ func ShowHierarchy(basePath, targetDir string) (error, bool) {
 		return nil, false // No hierarchy needed
 	}
 
-	// Sort tree (directories first, then alphabetically)
+	// Directories first, then alphabetically
 	sortTree(root)
-
-	// Render the tree
 	printTree(root, "", true, true)
 
 	return nil, true
@@ -93,15 +98,17 @@ func buildTree(node *TreeNode, dirPath string) error {
 		// Find or create the parent node
 		current := node
 		for i, part := range parts[:len(parts)-1] {
-			found := false
+			// Use map for O(1) lookup
+			childMap := make(map[string]*TreeNode)
 			for _, child := range current.Children {
-				if child.Name == part && child.Data.IsDir {
-					current = child
-					found = true
-					break
+				if child.Data.IsDir {
+					childMap[child.Name] = child
 				}
 			}
-			if !found {
+
+			if existingChild, found := childMap[part]; found {
+				current = existingChild
+			} else {
 				// Create intermediate directory
 				newDir := &TreeNode{
 					Name: part,
@@ -110,7 +117,7 @@ func buildTree(node *TreeNode, dirPath string) error {
 						Path:  filepath.Join(dirPath, strings.Join(parts[:i+1], string(filepath.Separator))),
 						IsDir: true,
 					},
-					Children: []*TreeNode{},
+					Children: nil,
 				}
 				current.Children = append(current.Children, newDir)
 				current = newDir
@@ -127,7 +134,7 @@ func buildTree(node *TreeNode, dirPath string) error {
 				Size:    info.Size(),
 				ModTime: info.ModTime().Unix(),
 			},
-			Children: []*TreeNode{},
+			Children: nil,
 		}
 		current.Children = append(current.Children, finalNode)
 
@@ -161,12 +168,11 @@ func printTree(node *TreeNode, prefix string, isLast bool, isRoot bool) {
 		// Choose the appropriate tree character
 		var treeChar string
 		if isLast {
-			treeChar = "└── "
+			treeChar = Last
 		} else {
-			treeChar = "├── "
+			treeChar = Branch
 		}
 
-		// Style the node name
 		styledName := styleFileNode(node)
 
 		// Print the current node
@@ -184,9 +190,9 @@ func printTree(node *TreeNode, prefix string, isLast bool, isRoot bool) {
 				childPrefix = ""
 			} else {
 				if isLast {
-					childPrefix = prefix + "    "
+					childPrefix = prefix + Space
 				} else {
-					childPrefix = prefix + "│   "
+					childPrefix = prefix + Vertical
 				}
 			}
 
@@ -203,14 +209,13 @@ func styleFileNode(node *TreeNode) string {
 		return node.Data.Name
 	}
 
-	// Get file node data
 	fileNode := node.Data
 
 	if fileNode.IsDir {
 		return fmt.Sprintf("%s%s%s%s", ColorBold, ColorBlue, fileNode.Name, ColorReset)
 	}
 
-	// Color files based on extension
+	// Color customized based on extension
 	ext := strings.ToLower(filepath.Ext(fileNode.Name))
 	switch ext {
 	case ".json", ".yaml", ".yml", ".toml":
