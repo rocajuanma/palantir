@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 ### Added
+- **Tree Visualization System**: New hierarchical tree display functionality
+  - `ShowHierarchy()` function for displaying directory structures as ASCII trees
+  - Support for filesystem traversal with proper directory/file distinction
+  - Color-coded file types (Go files, Markdown, JSON, YAML, shell scripts)
+  - Configurable tree display with constants for tree characters (├──, └──, │, etc.)
 
 ### Changed
 

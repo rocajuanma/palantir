@@ -21,6 +21,7 @@ go build -o palantir-demo ./cmd/demo
 - Progress indicators
 - Interactive confirmations
 - Colour and emoji formatting
+- Visualizes directory and file structures as a tree
 
 
 

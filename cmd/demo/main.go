@@ -93,4 +93,29 @@ func main() {
 	} else {
 		noColours.PrintInfo("User declined")
 	}
+
+	// Tree demo
+	handler.PrintHeader("Tree Output Demo")
+	handler.PrintStage("Tree with different output configurations")
+
+	// Show tree of current directory
+	handler.PrintInfo("Displaying tree structure of current directory:")
+	err, hasHierarchy := palantir.ShowHierarchy(".", "")
+	if err != nil {
+		handler.PrintError("Failed to display tree: %v", err)
+	} else if hasHierarchy {
+		handler.PrintSuccess("Tree displayed successfully!\n")
+	} else {
+		handler.PrintInfo("No hierarchy to display (single file)")
+	}
+
+	// Tree with colors disabled
+	handler.PrintInfo("Tree with colours disabled:")
+	palantir.SetGlobalOutputHandler(noColours)
+	err, hasHierarchy = palantir.ShowHierarchy(".", "")
+	if err != nil {
+		handler.PrintError("Failed to display tree: %v", err)
+	}
+
+	handler.PrintSuccess("Tree system demonstration completed!")
 }
