@@ -1,4 +1,4 @@
-# Palantir Terminal Demo
+# Palantir Demo
 
 A simple demonstration of the Palantir terminal formatting package.
 
@@ -12,18 +12,6 @@ go run ./cmd/demo
 go build -o palantir-demo ./cmd/demo
 ./palantir-demo
 ```
-
-## Output
-
-- Multiple configurations available
-- Level-only colouring available for subtler emphasis
-- All output levels (Header, Info, Success, Warning, Error, Stage)
-- Progress indicators
-- Interactive confirmations
-- Colour and emoji formatting
-- Visualizes directory and file structures as a tree
-
-
 
 <p align="center">
   <img src="../../assets/terminal.png" alt="Palantir Demo">
