@@ -94,8 +94,8 @@ func main() {
 		noColours.PrintInfo("User declined")
 	}
 
-	// Tree demo
-	handler.PrintHeader("Tree Output Demo")
+	// File Tree demo
+	handler.PrintHeader("File/Directory Tree Visualization")
 	handler.PrintStage("Tree with different output configurations")
 
 	// Show tree of current directory
@@ -115,6 +115,41 @@ func main() {
 	err, hasHierarchy = palantir.ShowHierarchy(".", "")
 	if err != nil {
 		handler.PrintError("Failed to display tree: %v", err)
+	}
+
+	// Sample YAML content
+	yamlContent := []byte(`
+database:
+  host: localhost
+  port: 5432
+  credentials:
+    username: admin
+    password: secret
+  tables:
+    - users
+    - posts
+    - comments
+server:
+  host: 0.0.0.0
+  port: 8080
+  debug: true
+  features:
+    - authentication
+    - logging
+    - monitoring
+redis:
+  host: redis-server
+  port: 6379
+  database: 0
+`)
+
+	// YAML Tree demo
+	handler.PrintHeader("YAML Tree Visualization")
+	err = palantir.ShowYAMLHierarchy(yamlContent)
+	if err != nil {
+		handler.PrintError("Failed to display YAML tree: %v", err)
+	} else {
+		handler.PrintSuccess("YAML tree displayed successfully!\n")
 	}
 
 	handler.PrintSuccess("Tree system demonstration completed!")

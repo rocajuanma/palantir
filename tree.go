@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+
+	"gopkg.in/yaml.v3"
 )
 
 // Tree display constants
@@ -19,7 +21,7 @@ const (
 // TreeNode represents a simple tree node for display purposes only
 type TreeNode struct {
 	Name     string
-	Data     FileNode
+	Data     interface{} // Can be FileNode or YAMLNode
 	Children []*TreeNode
 }
 
@@ -59,7 +61,7 @@ func ShowHierarchy(basePath, targetDir string) (error, bool) {
 	}
 
 	// Check if tree has only one node and it's not a directory
-	if len(root.Children) == 1 && !root.Children[0].Data.IsDir {
+	if len(root.Children) == 1 && !getIsDir(root.Children[0].Data) {
 		return nil, false // No hierarchy needed
 	}
 
@@ -101,7 +103,7 @@ func buildTree(node *TreeNode, dirPath string) error {
 			// Use map for O(1) lookup
 			childMap := make(map[string]*TreeNode)
 			for _, child := range current.Children {
-				if child.Data.IsDir {
+				if getIsDir(child.Data) {
 					childMap[child.Name] = child
 				}
 			}
@@ -150,8 +152,12 @@ func sortTree(node *TreeNode) {
 
 	// Sort children: directories first, then files, both alphabetically
 	sort.Slice(node.Children, func(i, j int) bool {
-		if node.Children[i].Data.IsDir != node.Children[j].Data.IsDir {
-			return node.Children[i].Data.IsDir // directories come first
+		// Get IsDir from the appropriate data type
+		iIsDir := getIsDir(node.Children[i].Data)
+		jIsDir := getIsDir(node.Children[j].Data)
+
+		if iIsDir != jIsDir {
+			return iIsDir // directories come first
 		}
 		return node.Children[i].Name < node.Children[j].Name
 	})
@@ -160,6 +166,17 @@ func sortTree(node *TreeNode) {
 	for _, child := range node.Children {
 		sortTree(child)
 	}
+}
+
+// getIsDir extracts IsDir from either FileNode or YAMLNode
+func getIsDir(data interface{}) bool {
+	if fileNode, ok := data.(FileNode); ok {
+		return fileNode.IsDir
+	}
+	if yamlNode, ok := data.(YAMLNode); ok {
+		return yamlNode.IsDir
+	}
+	return false
 }
 
 // printTree recursively prints a tree node with ASCII art and colors
@@ -206,27 +223,144 @@ func styleFileNode(node *TreeNode) string {
 	outputConfig := GetGlobalOutputHandler().(*outputHandler).config
 
 	if !outputConfig.UseColors {
-		return node.Data.Name
+		return node.Name
 	}
 
-	fileNode := node.Data
+	// Handle FileNode
+	if fileNode, ok := node.Data.(FileNode); ok {
+		if fileNode.IsDir {
+			return fmt.Sprintf("%s%s%s%s", ColorBold, ColorBlue, fileNode.Name, ColorReset)
+		}
 
-	if fileNode.IsDir {
-		return fmt.Sprintf("%s%s%s%s", ColorBold, ColorBlue, fileNode.Name, ColorReset)
+		// Color customized based on extension
+		ext := strings.ToLower(filepath.Ext(fileNode.Name))
+		switch ext {
+		case ".json", ".yaml", ".yml", ".toml":
+			return fmt.Sprintf("%s%s%s", ColorGreen, fileNode.Name, ColorReset)
+		case ".md", ".txt", ".log":
+			return fmt.Sprintf("%s%s%s", ColorCyan, fileNode.Name, ColorReset)
+		case ".sh", ".zsh", ".bash":
+			return fmt.Sprintf("%s%s%s", ColorYellow, fileNode.Name, ColorReset)
+		case ".go":
+			return fmt.Sprintf("%s%s%s", ColorPurple, fileNode.Name, ColorReset)
+		default:
+			return fileNode.Name
+		}
 	}
 
-	// Color customized based on extension
-	ext := strings.ToLower(filepath.Ext(fileNode.Name))
-	switch ext {
-	case ".json", ".yaml", ".yml", ".toml":
-		return fmt.Sprintf("%s%s%s", ColorGreen, fileNode.Name, ColorReset)
-	case ".md", ".txt", ".log":
-		return fmt.Sprintf("%s%s%s", ColorCyan, fileNode.Name, ColorReset)
-	case ".sh", ".zsh", ".bash":
-		return fmt.Sprintf("%s%s%s", ColorYellow, fileNode.Name, ColorReset)
-	case ".go":
-		return fmt.Sprintf("%s%s%s", ColorPurple, fileNode.Name, ColorReset)
+	// Handle YAMLNode
+	if yamlNode, ok := node.Data.(YAMLNode); ok {
+		if yamlNode.IsDir {
+			return fmt.Sprintf("%s%s%s%s", ColorBold, ColorBlue, yamlNode.Name, ColorReset)
+		}
+
+		// Color based on node type
+		switch yamlNode.NodeType {
+		case "object":
+			return fmt.Sprintf("%s%s%s%s", ColorBold, ColorBlue, yamlNode.Name, ColorReset)
+		case "array":
+			return fmt.Sprintf("%s%s%s", ColorYellow, yamlNode.Name, ColorReset)
+		case "scalar":
+			return fmt.Sprintf("%s%s%s", ColorGreen, yamlNode.Name, ColorReset)
+		default:
+			return yamlNode.Name
+		}
+	}
+
+	// Fallback
+	return node.Name
+}
+
+// YAMLNode represents a YAML data node for tree visualization
+type YAMLNode struct {
+	Name     string
+	Value    interface{}
+	IsDir    bool
+	NodeType string // "object", "array", "scalar"
+}
+
+// ParseYAMLToTree converts YAML content to TreeNode structure
+func ParseYAMLToTree(yamlContent []byte) (*TreeNode, error) {
+	var data interface{}
+	if err := yaml.Unmarshal(yamlContent, &data); err != nil {
+		return nil, fmt.Errorf("failed to parse YAML: %w", err)
+	}
+
+	root := &TreeNode{
+		Name:     "root",
+		Data:     YAMLNode{Name: "root", Value: data, IsDir: true, NodeType: "object"},
+		Children: nil,
+	}
+
+	return buildYAMLTree(root, data), nil
+}
+
+// buildYAMLTree recursively builds a tree structure from YAML data
+func buildYAMLTree(node *TreeNode, data interface{}) *TreeNode {
+	switch v := data.(type) {
+	case map[string]interface{}:
+		// Handle objects
+		for key, value := range v {
+			child := &TreeNode{
+				Name:     key,
+				Data:     YAMLNode{Name: key, Value: value, IsDir: true, NodeType: "object"},
+				Children: nil,
+			}
+			node.Children = append(node.Children, buildYAMLTree(child, value))
+		}
+	case []interface{}:
+		// Handle arrays
+		for i, item := range v {
+			// Create a name with just the value for array items
+			var itemName string
+			switch itemValue := item.(type) {
+			case string:
+				itemName = itemValue
+			case int, int64, float64:
+				itemName = fmt.Sprintf("%v", itemValue)
+			case bool:
+				itemName = fmt.Sprintf("%t", itemValue)
+			default:
+				itemName = fmt.Sprintf("[%d]", i)
+			}
+
+			child := &TreeNode{
+				Name:     itemName,
+				Data:     YAMLNode{Name: itemName, Value: item, IsDir: false, NodeType: "array"},
+				Children: nil,
+			}
+			// Only recursively build if the item is a complex type (map or slice)
+			switch item.(type) {
+			case map[string]interface{}, []interface{}:
+				node.Children = append(node.Children, buildYAMLTree(child, item))
+			default:
+				// For scalar values, just add the child as-is
+				node.Children = append(node.Children, child)
+			}
+		}
 	default:
-		return fileNode.Name
+		// Handle scalar values
+		node.Data = YAMLNode{Name: node.Name, Value: v, IsDir: false, NodeType: "scalar"}
 	}
+	return node
+}
+
+// ShowYAMLHierarchy displays YAML content as a tree structure
+func ShowYAMLHierarchy(yamlContent []byte) error {
+	root, err := ParseYAMLToTree(yamlContent)
+	if err != nil {
+		return fmt.Errorf("failed to parse YAML: %w", err)
+	}
+	sortTree(root)
+	printTree(root, "", true, true)
+	return nil
+}
+
+// ShowYAMLHierarchyFromFile reads and displays a YAML file as a tree structure
+func ShowYAMLHierarchyFromFile(filePath string) error {
+	content, err := os.ReadFile(filePath)
+	if err != nil {
+		return fmt.Errorf("failed to read YAML file: %w", err)
+	}
+	return ShowYAMLHierarchy(content)
 }
