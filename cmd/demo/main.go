@@ -5,6 +5,32 @@ import (
 )
 
 func main() {
+	// Sample YAML content
+	yamlContent := []byte(`
+database:
+  host: localhost
+  port: 5432
+  credentials:
+    username: admin
+    password: secret
+  tables:
+    - users
+    - posts
+    - comments
+server:
+  host: 0.0.0.0
+  port: 8080
+  debug: true
+  features:
+    - authentication
+    - logging
+    - monitoring
+redis:
+  host: redis-server
+  port: 6379
+  database: 0
+`)
+
 	// Initialize the default output handler(all features enabled)
 	handler := palantir.NewDefaultOutputHandler()
 
@@ -94,28 +120,28 @@ func main() {
 		noColours.PrintInfo("User declined")
 	}
 
-	// Tree demo
-	handler.PrintHeader("Tree Output Demo")
-	handler.PrintStage("Tree with different output configurations")
+	// File Tree demo
+	handler.PrintHeader("File/Directory Tree Visualization")
+	handler.PrintStage("Tree with colours")
 
-	// Show tree of current directory
-	handler.PrintInfo("Displaying tree structure of current directory:")
-	err, hasHierarchy := palantir.ShowHierarchy(".", "")
+	// Colours enabled by default
+	err, _ := palantir.ShowHierarchy(".", "")
 	if err != nil {
 		handler.PrintError("Failed to display tree: %v", err)
-	} else if hasHierarchy {
-		handler.PrintSuccess("Tree displayed successfully!\n")
-	} else {
-		handler.PrintInfo("No hierarchy to display (single file)")
 	}
 
-	// Tree with colors disabled
-	handler.PrintInfo("Tree with colours disabled:")
+	// Tree with colours disabled
+	handler.PrintStage("Tree with without colours")
 	palantir.SetGlobalOutputHandler(noColours)
-	err, hasHierarchy = palantir.ShowHierarchy(".", "")
+	err, _ = palantir.ShowHierarchy(".", "")
 	if err != nil {
 		handler.PrintError("Failed to display tree: %v", err)
 	}
 
-	handler.PrintSuccess("Tree system demonstration completed!")
+	// YAML Tree demo
+	handler.PrintHeader("YAML Tree Visualization")
+	err = palantir.ShowYAMLHierarchy(yamlContent)
+	if err != nil {
+		handler.PrintError("Failed to display YAML tree: %v", err)
+	}
 }

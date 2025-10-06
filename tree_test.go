@@ -118,10 +118,10 @@ func TestSortTree(t *testing.T) {
 
 	// Verify directories are first
 	for i, child := range root.Children {
-		if i < 2 && !child.Data.IsDir {
+		if i < 2 && !getIsDir(child.Data) {
 			t.Errorf("Expected directories to come first, but found file %q at position %d", child.Name, i)
 		}
-		if i >= 2 && child.Data.IsDir {
+		if i >= 2 && getIsDir(child.Data) {
 			t.Errorf("Expected files to come after directories, but found directory %q at position %d", child.Name, i)
 		}
 	}
@@ -201,7 +201,7 @@ func TestStyleFileNode(t *testing.T) {
 			result := styleFileNode(tt.node)
 
 			// For directories and known file types, should contain color codes
-			if tt.node.Data.IsDir ||
+			if getIsDir(tt.node.Data) ||
 				strings.HasSuffix(tt.node.Name, ".go") ||
 				strings.HasSuffix(tt.node.Name, ".md") ||
 				strings.HasSuffix(tt.node.Name, ".json") ||
@@ -818,5 +818,488 @@ func TestBuildTreeWithBrokenSymlink(t *testing.T) {
 		t.Logf("buildTree handled broken symlink with error: %v", err)
 	} else {
 		t.Log("buildTree handled broken symlink without error")
+	}
+}
+
+func TestParseYAMLToTree(t *testing.T) {
+	tests := []struct {
+		name             string
+		yamlContent      []byte
+		expectedRoot     string
+		expectedSections []string
+		expectedError    bool
+	}{
+		{
+			name: "Valid YAML with nested structure",
+			yamlContent: []byte(`
+database:
+  host: localhost
+  port: 5432
+  credentials:
+    username: admin
+    password: secret
+  tables:
+    - users
+    - posts
+    - comments
+server:
+  host: 0.0.0.0
+  port: 8080
+  debug: true
+`),
+			expectedRoot:     "root",
+			expectedSections: []string{"database", "server"},
+			expectedError:    false,
+		},
+		{
+			name:             "Empty YAML",
+			yamlContent:      []byte(""),
+			expectedRoot:     "root",
+			expectedSections: []string{},
+			expectedError:    false,
+		},
+		{
+			name: "Simple key-value pairs",
+			yamlContent: []byte(`
+name: test
+value: 42
+enabled: true
+`),
+			expectedRoot:     "root",
+			expectedSections: []string{"name", "value", "enabled"},
+			expectedError:    false,
+		},
+		{
+			name: "Invalid YAML",
+			yamlContent: []byte(`
+database:
+  host: localhost
+  port: 5432
+  invalid: [unclosed array
+`),
+			expectedRoot:     "",
+			expectedSections: []string{},
+			expectedError:    true,
+		},
+		{
+			name:             "Nil YAML content",
+			yamlContent:      nil,
+			expectedRoot:     "root",
+			expectedSections: []string{},
+			expectedError:    false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			root, err := ParseYAMLToTree(tt.yamlContent)
+
+			if tt.expectedError {
+				if err == nil {
+					t.Error("Expected error, got nil")
+				}
+				return
+			}
+
+			if err != nil {
+				t.Fatalf("ParseYAMLToTree() error = %v", err)
+			}
+
+			// Verify root structure
+			if root.Name != tt.expectedRoot {
+				t.Errorf("Expected root name %q, got %q", tt.expectedRoot, root.Name)
+			}
+
+			// Verify we have the expected sections
+			if len(root.Children) != len(tt.expectedSections) {
+				t.Errorf("Expected %d children, got %d", len(tt.expectedSections), len(root.Children))
+			}
+
+			// Verify section names using map for O(1) lookup
+			actualSections := make(map[string]bool)
+			for _, child := range root.Children {
+				actualSections[child.Name] = true
+			}
+
+			for _, expected := range tt.expectedSections {
+				if !actualSections[expected] {
+					t.Errorf("Expected section %q not found", expected)
+				}
+			}
+		})
+	}
+}
+
+func TestParseYAMLToTreeWithDifferentDataTypes(t *testing.T) {
+	tests := []struct {
+		name           string
+		yamlContent    []byte
+		expectedArrays map[string][]string
+		expectedError  bool
+	}{
+		{
+			name: "Arrays with different data types",
+			yamlContent: []byte(`
+string_value: hello
+number_value: 42
+float_value: 3.14
+boolean_value: true
+array_of_strings:
+  - first
+  - second
+  - third
+array_of_numbers:
+  - 1
+  - 2
+  - 3
+array_of_booleans:
+  - true
+  - false
+nested_object:
+  level1:
+    level2:
+      value: deep
+`),
+			expectedArrays: map[string][]string{
+				"array_of_strings":  {"first", "second", "third"},
+				"array_of_numbers":  {"1", "2", "3"},
+				"array_of_booleans": {"true", "false"},
+			},
+			expectedError: false,
+		},
+		{
+			name: "Mixed array types",
+			yamlContent: []byte(`
+mixed_array:
+  - string_item
+  - 42
+  - true
+  - 3.14
+`),
+			expectedArrays: map[string][]string{
+				"mixed_array": {"string_item", "42", "true", "3.14"},
+			},
+			expectedError: false,
+		},
+		{
+			name: "Empty arrays",
+			yamlContent: []byte(`
+empty_strings: []
+empty_numbers: []
+`),
+			expectedArrays: map[string][]string{
+				"empty_strings": {},
+				"empty_numbers": {},
+			},
+			expectedError: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			root, err := ParseYAMLToTree(tt.yamlContent)
+
+			if tt.expectedError {
+				if err == nil {
+					t.Errorf("Expected error, got nil")
+				}
+				return
+			}
+
+			if err != nil {
+				t.Fatalf("ParseYAMLToTree() error = %v", err)
+			}
+
+			// Test each expected array
+			for arrayName, expectedValues := range tt.expectedArrays {
+				// Find the array
+				var arrayNode *TreeNode
+				for _, child := range root.Children {
+					if child.Name == arrayName {
+						arrayNode = child
+						break
+					}
+				}
+
+				if arrayNode == nil {
+					t.Errorf("Array %q not found", arrayName)
+					continue
+				}
+
+				// Verify array length
+				if len(arrayNode.Children) != len(expectedValues) {
+					t.Errorf("Expected array %q to have %d children, got %d", arrayName, len(expectedValues), len(arrayNode.Children))
+					continue
+				}
+
+				// Verify array values
+				for i, child := range arrayNode.Children {
+					if i < len(expectedValues) && child.Name != expectedValues[i] {
+						t.Errorf("Expected array %q item %d to be %q, got %q", arrayName, i, expectedValues[i], child.Name)
+					}
+				}
+			}
+		})
+	}
+}
+
+func TestShowYAMLHierarchy(t *testing.T) {
+	tests := []struct {
+		name        string
+		yamlContent []byte
+		expectError bool
+	}{
+		{
+			name: "Valid YAML with nested structure",
+			yamlContent: []byte(`
+database:
+  host: localhost
+  port: 5432
+  tables:
+    - users
+    - posts
+`),
+			expectError: false,
+		},
+		{
+			name: "Simple key-value pairs",
+			yamlContent: []byte(`
+name: test
+value: 42
+enabled: true
+`),
+			expectError: false,
+		},
+		{
+			name:        "Empty YAML",
+			yamlContent: []byte(""),
+			expectError: false,
+		},
+		{
+			name:        "Nil YAML content",
+			yamlContent: nil,
+			expectError: false,
+		},
+		{
+			name: "Invalid YAML",
+			yamlContent: []byte(`
+database:
+  host: localhost
+  port: 5432
+  invalid: [unclosed array
+`),
+			expectError: true,
+		},
+		{
+			name: "Malformed YAML syntax",
+			yamlContent: []byte(`
+database:
+  host: localhost
+  port: 5432
+  invalid: [unclosed array
+  extra: value
+`),
+			expectError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := ShowYAMLHierarchy(tt.yamlContent)
+
+			if tt.expectError {
+				if err == nil {
+					t.Errorf("Expected error, got nil")
+				}
+			} else {
+				if err != nil {
+					t.Errorf("ShowYAMLHierarchy() error = %v", err)
+				}
+			}
+		})
+	}
+}
+
+func TestShowYAMLHierarchyFromFile(t *testing.T) {
+	tests := []struct {
+		name        string
+		yamlContent []byte
+		expectError bool
+	}{
+		{
+			name: "Valid YAML file",
+			yamlContent: []byte(`
+database:
+  host: localhost
+  port: 5432
+  tables:
+    - users
+    - posts
+`),
+			expectError: false,
+		},
+		{
+			name: "Simple YAML file",
+			yamlContent: []byte(`
+name: test
+value: 42
+enabled: true
+`),
+			expectError: false,
+		},
+		{
+			name:        "Empty YAML file",
+			yamlContent: []byte(""),
+			expectError: false,
+		},
+		{
+			name: "Invalid YAML file",
+			yamlContent: []byte(`
+database:
+  host: localhost
+  port: 5432
+  invalid: [unclosed array
+`),
+			expectError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Create a temporary YAML file
+			tempFile, err := os.CreateTemp("", "test_yaml_*.yaml")
+			if err != nil {
+				t.Fatalf("Failed to create temp file: %v", err)
+			}
+			defer os.Remove(tempFile.Name())
+
+			// Write YAML content to file
+			if _, err := tempFile.Write(tt.yamlContent); err != nil {
+				t.Fatalf("Failed to write YAML content: %v", err)
+			}
+			tempFile.Close()
+
+			// Test ShowYAMLHierarchyFromFile
+			err = ShowYAMLHierarchyFromFile(tempFile.Name())
+
+			if tt.expectError {
+				if err == nil {
+					t.Errorf("Expected error, got nil")
+				}
+			} else {
+				if err != nil {
+					t.Errorf("ShowYAMLHierarchyFromFile() error = %v", err)
+				}
+			}
+		})
+	}
+
+	// Test with non-existent file
+	t.Run("Non-existent file", func(t *testing.T) {
+		err := ShowYAMLHierarchyFromFile("/nonexistent/file.yaml")
+		if err == nil {
+			t.Error("Expected error for non-existent file, got nil")
+		}
+	})
+}
+
+func TestYAMLNodeDataTypes(t *testing.T) {
+	// Test YAML content with mixed data types
+	yamlContent := []byte(`
+database:
+  host: localhost
+  port: 5432
+  tables:
+    - users
+    - posts
+server:
+  host: 0.0.0.0
+  port: 8080
+`)
+
+	root, err := ParseYAMLToTree(yamlContent)
+	if err != nil {
+		t.Fatalf("ParseYAMLToTree() error = %v", err)
+	}
+
+	// Test root node
+	if root.Name != "root" {
+		t.Errorf("Expected root name 'root', got %q", root.Name)
+	}
+
+	// Find database section
+	var database *TreeNode
+	for _, child := range root.Children {
+		if child.Name == "database" {
+			database = child
+			break
+		}
+	}
+
+	if database == nil {
+		t.Fatal("database section not found")
+	}
+
+	// Verify database YAMLNode data
+	if yamlNode, ok := database.Data.(YAMLNode); ok {
+		if yamlNode.Name != "database" {
+			t.Errorf("Expected YAMLNode name 'database', got %q", yamlNode.Name)
+		}
+		if !yamlNode.IsDir {
+			t.Error("Expected YAMLNode IsDir to be true for object")
+		}
+		if yamlNode.NodeType != "object" {
+			t.Errorf("Expected YAMLNode NodeType 'object', got %q", yamlNode.NodeType)
+		}
+	} else {
+		t.Error("Expected YAMLNode data type")
+	}
+
+	// Find tables array
+	var tables *TreeNode
+	for _, child := range database.Children {
+		if child.Name == "tables" {
+			tables = child
+			break
+		}
+	}
+
+	if tables == nil {
+		t.Fatal("tables array not found")
+	}
+
+	// Verify array YAMLNode data
+	if yamlNode, ok := tables.Data.(YAMLNode); ok {
+		if yamlNode.Name != "tables" {
+			t.Errorf("Expected YAMLNode name 'tables', got %q", yamlNode.Name)
+		}
+		if !yamlNode.IsDir {
+			t.Error("Expected YAMLNode IsDir to be true for array")
+		}
+		if yamlNode.NodeType != "object" {
+			t.Errorf("Expected YAMLNode NodeType 'object', got %q", yamlNode.NodeType)
+		}
+	} else {
+		t.Error("Expected YAMLNode data type for array")
+	}
+
+	// Find first table item
+	if len(tables.Children) == 0 {
+		t.Fatal("Expected at least one table item")
+	}
+
+	firstTable := tables.Children[0]
+	if yamlNode, ok := firstTable.Data.(YAMLNode); ok {
+		if yamlNode.Name != "users" {
+			t.Errorf("Expected YAMLNode name 'users', got %q", yamlNode.Name)
+		}
+		if yamlNode.IsDir {
+			t.Error("Expected YAMLNode IsDir to be false for array item")
+		}
+		if yamlNode.NodeType != "array" {
+			t.Errorf("Expected YAMLNode NodeType 'array', got %q", yamlNode.NodeType)
+		}
+	} else {
+		t.Error("Expected YAMLNode data type for array item")
 	}
 }

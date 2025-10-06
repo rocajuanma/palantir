@@ -5,13 +5,17 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 ### Added
-- **Tree Visualization System**: New hierarchical tree display functionality
-  - `ShowHierarchy()` function for displaying directory structures as ASCII trees
-  - Support for filesystem traversal with proper directory/file distinction
-  - Color-coded file types (Go files, Markdown, JSON, YAML, shell scripts)
-  - Configurable tree display with constants for tree characters (├──, └──, │, etc.)
+- **Tree Visualization System**
+  - New hierarchical tree display functionality for directories and files
+  - Color-coded file types (Go, Markdown, JSON, YAML, shell scripts)
+  - Enhanced tree display for YAML content
+  - Support for nested YAML structures with color-coded node types
+  - Integrated with OutputConfig for consistent styling
+  - Comprehensive test coverage for all tree logic
 
 ### Changed
+- Enhanced README with comprehensive tree visualization examples, better feature list and update usage section
+- Updated `main.go` in demo to showcase new tree visualization features
 
 ### Fixed
 
