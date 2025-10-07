@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 ### Added
+
+### Changed
+
+### Fixed
+
+## [1.1.0] - 2025-10-05
+
+### Added
 - **Tree Visualization System**
   - New hierarchical tree display functionality for directories and files
   - Color-coded file types (Go, Markdown, JSON, YAML, shell scripts)
